@@ -3,7 +3,7 @@
 #include <time.h>
 #include <sys/time.h>
 
-#define MATRIX_SIZE 800
+#define MATRIX_SIZE 2000
 
 void printMatrix(float mat[][MATRIX_SIZE]){
     for (int i = 0; i < MATRIX_SIZE; i++)
@@ -23,10 +23,14 @@ int main(){
     double exec_time;
     // gettimeofday(&start_time, NULL);
 
-    float A[MATRIX_SIZE][MATRIX_SIZE];
-    float B[MATRIX_SIZE][MATRIX_SIZE];
+    float (*A)[MATRIX_SIZE] = malloc(sizeof(float[MATRIX_SIZE][MATRIX_SIZE]));
+    float (*B)[MATRIX_SIZE] = malloc(sizeof(float[MATRIX_SIZE][MATRIX_SIZE]));
+    float (*C)[MATRIX_SIZE] = malloc(sizeof(float[MATRIX_SIZE][MATRIX_SIZE]));
 
-    float C[MATRIX_SIZE][MATRIX_SIZE];
+    if(!A || !B || !C) {
+        printf("Memrory allocation falied");
+        return 1;
+    }
 
     srand(time(NULL));
     //Matrix initializations
@@ -74,5 +78,8 @@ int main(){
     
     printf("Matrix size - %d\n", MATRIX_SIZE);
     
+    free(A);
+    free(B);
+    free(C);
     
 }
