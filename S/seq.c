@@ -2,8 +2,9 @@
 #include <stdlib.h>
 #include <time.h>
 #include <sys/time.h>
+#include <float.h>
 
-#define MATRIX_SIZE 2000
+#define MATRIX_SIZE 2048
 
 void printMatrix(float mat[][MATRIX_SIZE]){
     for (int i = 0; i < MATRIX_SIZE; i++)
@@ -21,6 +22,7 @@ void printMatrix(float mat[][MATRIX_SIZE]){
 int main(){
     struct timeval start_time, end_time;
     double exec_time;
+    float minC = FLT_MAX;
     // gettimeofday(&start_time, NULL);
 
     float (*A)[MATRIX_SIZE] = malloc(sizeof(float[MATRIX_SIZE][MATRIX_SIZE]));
@@ -38,12 +40,13 @@ int main(){
     {
         for (int j = 0; j < MATRIX_SIZE; j++)
         {
-            A[i][j] = (float)rand();
-            B[i][j] = (float)rand();
+            A[i][j] = (float)rand();// / (float)(RAND_MAX/10.0);
+            B[i][j] = (float)rand();// / (float)(RAND_MAX/10.0);
             C[i][j] = (float)0;
         }
         
     }
+
 
     // printf("\n\nPrinting A...\n");
     // printMatrix(A);
@@ -61,13 +64,14 @@ int main(){
             {
                 C[i][j] += A[i][k] * B[k][j];
             }
+            if(C[i][j] < minC) minC = C[i][j];
             
         }
         
     }
     gettimeofday(&end_time, NULL);
 
-    //Print matric C
+    // //Print matric C
     // printf("\n\nPrinting C...\n");
     // printMatrix(C);
     
@@ -77,6 +81,8 @@ int main(){
     printf("Execution time - %f\n", exec_time);
     
     printf("Matrix size - %d\n", MATRIX_SIZE);
+
+    printf("Minimim value in matrix C - %f\n", minC);
     
     free(A);
     free(B);
