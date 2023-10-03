@@ -14,7 +14,7 @@ ISPC_OBJ = ispc-co.o
 
 ISPC_H = ispc-co.h
 
-all:$(TARGET)
+all:$(TARGET) my_ispc-common.h
 
 $(TARGET):$(SRC)
 	$(CC) $(CFLAGS) $(ISPC_OBJ) $(SRC) -o $(TARGET)
@@ -24,7 +24,7 @@ $(SRC):$(ISPC)
 ispc:$(ISPC_SRC)
 	$(ISPC) $(ISPC_SRC) -o $(ISPC_OBJ) -h $(ISPC_H)
 
-run:$(TARGET)
+run: all
 	./$(TARGET)
 
 clean:

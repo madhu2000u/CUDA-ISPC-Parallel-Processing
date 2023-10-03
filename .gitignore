@@ -1,4 +1,6 @@
 *.out
 *.o
 *.h
+.nfs*
 ispc
+!my_*.h
