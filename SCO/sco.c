@@ -94,7 +94,12 @@ int main(){
             {
                 C[i][j] += A[i][k] * B[j][k];
             }
-            if(C[i][j] < minC) minC = C[i][j];
+            if(C[i][j] < minC)
+            {
+                minC = C[i][j];
+                row = i;
+                col = j;
+            }
             
         }
         
@@ -113,7 +118,7 @@ int main(){
     
     printf("Matrix size - %d\n", MATRIX_SIZE);
 
-    printf("Minimim value in matrix C - %f\n", minC);
+    printf("Minimim value in matrix C (value, row, column) - (%f, %d, %d)\n", minC, row, col);
     
     free(A);
     free(B);
