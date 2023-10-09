@@ -23,7 +23,7 @@ int main(){
     struct timeval start_time, end_time;
     double exec_time;
     float minC = FLT_MAX;
-    // gettimeofday(&start_time, NULL);
+    int row, col;
 
     float (*A)[MATRIX_SIZE] = malloc(sizeof(float[MATRIX_SIZE][MATRIX_SIZE]));
     float (*B)[MATRIX_SIZE] = malloc(sizeof(float[MATRIX_SIZE][MATRIX_SIZE]));
@@ -64,7 +64,12 @@ int main(){
             {
                 C[i][j] += A[i][k] * B[k][j];
             }
-            if(C[i][j] < minC) minC = C[i][j];
+            if(C[i][j] < minC)
+            {
+                minC = C[i][j];
+                row = i;
+                col = j;
+            }
             
         }
         
@@ -75,14 +80,13 @@ int main(){
     // printf("\n\nPrinting C...\n");
     // printMatrix(C);
     
-    // gettimeofday(&end_time, NULL);
     exec_time = (double)(end_time.tv_sec - start_time.tv_sec) + (double)(end_time.tv_usec - start_time.tv_usec)/(double)1000000;
 
     printf("Execution time - %f\n", exec_time);
     
     printf("Matrix size - %d\n", MATRIX_SIZE);
 
-    printf("Minimim value in matrix C - %f\n", minC);
+    printf("Minimim value in matrix C (value, row, column) - (%f, %d, %d)\n", minC, row, col);
     
     free(A);
     free(B);
