@@ -7,12 +7,13 @@
 #include <stdbool.h>
 #include <pthread.h>
 
-#define MATRIX_SIZE 2048
-#define DEBUG 0
-#define NUM_THREADS 16
+#define MATRIX_SIZE 4
+#define DEBUG 1
+#define NUM_THREADS 2
 
 
 pthread_mutex_t minCElement_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_barrier_t barrier;
 
 struct matElement
 {
@@ -135,11 +136,28 @@ void transposeMatrix(float mat[][MATRIX_SIZE])
 }
 
 //Matrix multiplication
-void* matrixMultiply(void* curr_thread_args)
+void* transposeMatrixAndMultiply(void* curr_thread_args)
 {   
     struct thread_args* args = curr_thread_args;
     struct matElement minCElement;
     minCElement.value = FLT_MAX;
+
+    for (int i = args->row_start; i < (args->row_end - 1); i++)
+    {   
+        float temp = 0;
+        for (int j = i + 1; j < MATRIX_SIZE; j++)
+        {
+            // start = rdtsc();
+            temp = args->B[i][j];
+            args->B[i][j] = args->B[j][i];
+            args->B[j][i] = temp;
+            // end = rdtsc();
+        }
+        
+    }
+
+    //TODO barrier here
+    pthread_barrier_wait(&barrier);
 
     for (int i = args->row_start; i < args->row_end; i++)
     {
@@ -179,6 +197,7 @@ int main(){
 
     pthread_t thread_id[NUM_THREADS];
     struct thread_args thread_args[NUM_THREADS];
+    pthread_barrier_init(&barrier, NULL, NUM_THREADS);
 
     float matrixSizeByNumThreads = (float)MATRIX_SIZE/(float)NUM_THREADS;
     float ceilFloatAvg = (ceil(matrixSizeByNumThreads) + floor(matrixSizeByNumThreads))/2.0;
@@ -214,7 +233,7 @@ int main(){
         printMatrix(B);
     #endif
 
-    transposeMatrix(B);
+    // transposeMatrix(B);
     
     gettimeofday(&start_time, NULL);
     
@@ -227,7 +246,7 @@ int main(){
         thread_args[i].row_end = thread_args[i].row_start + threadWorkRows;
         thread_args[i].minC = minCArray;
         rowsDispatchPending -= threadWorkRows;
-        pthread_create(&thread_id[i], NULL, matrixMultiply, (void*)&thread_args[i]);
+        pthread_create(&thread_id[i], NULL, transposeMatrixAndMultiply, (void*)&thread_args[i]);
     }
     thread_args[NUM_THREADS - 1].A = A;
     thread_args[NUM_THREADS - 1].B = B;
@@ -235,13 +254,15 @@ int main(){
     thread_args[NUM_THREADS - 1].row_start = (NUM_THREADS - 1) * threadWorkRows;
     thread_args[NUM_THREADS - 1].row_end = thread_args[NUM_THREADS - 1].row_start + rowsDispatchPending;
     thread_args[NUM_THREADS - 1].minC = minCArray;
-    pthread_create(&thread_id[NUM_THREADS - 1], NULL, matrixMultiply, (void*)&thread_args[NUM_THREADS - 1]);
+    pthread_create(&thread_id[NUM_THREADS - 1], NULL, transposeMatrixAndMultiply, (void*)&thread_args[NUM_THREADS - 1]);
     
     for (int i = 0; i < NUM_THREADS - 1; i++)
     {
         pthread_join(thread_id[i], NULL);
     }
     gettimeofday(&end_time, NULL);
+
+    pthread_barrier_destroy(&barrier);
 
     #if DEBUG
         //Print transposed matrix

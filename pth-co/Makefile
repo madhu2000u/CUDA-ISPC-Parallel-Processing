@@ -1,6 +1,6 @@
 CC = gcc
 
-CFLAGS = -std=c99
+CFLAGS = -std=gnu99
 
 TARGET = pth-co.out
 
