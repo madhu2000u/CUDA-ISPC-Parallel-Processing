@@ -7,15 +7,20 @@
 #include <stdbool.h>
 #include <pthread.h>
 
-#define MATRIX_SIZE 4
-#define DEBUG 1
-#define NUM_THREADS 8
+#define MATRIX_SIZE 2048
+#define DEBUG 0
+#define NUM_THREADS 16
+
+
+pthread_mutex_t minCElement_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 struct matElement
 {
     float value;
     int row, col;
 };
+
+struct matElement minCElementGlobal;
 
 struct thread_args
 {   
@@ -91,10 +96,23 @@ void checkMatrixResult(float A[][MATRIX_SIZE], float B[][MATRIX_SIZE], float res
         }
         
     }
-    // if(abs(ref_min.value - minValueC.value) > threshold || ref_min.row != minValueC.row || ref_min.col != minValueC.col) check = false;
+    if(abs(ref_min.value - minCElementGlobal.value) > threshold)
+    {
+        printf("Incorrect min value! [(ref, row, col) : (result, row, col)] - [(%f, %f, %f) : (%f, %f, %f)]\n", ref_min.value, ref_min.row, ref_min.col, minCElementGlobal.value, minCElementGlobal.row, minCElementGlobal.col);
+
+    }
+    else if(ref_min.row != minCElementGlobal.row)
+    {
+        printf("Incorrect row index!\n");
+    }
+    else if(ref_min.col != minCElementGlobal.col)
+    {
+        printf("Incorrect column index!\n");
+    }
+    else printf("Min value and indexes match!\n");
 
     if(check) printf("Result matrix match!\n");
-    else printf("Result matrix does not match or min value and index do not match!\n");
+    else printf("Result matrix does not match!\n");
 }
 
 //Matrix B transpose for cache optimization using cache spatial locality
@@ -142,6 +160,14 @@ void* matrixMultiply(void* curr_thread_args)
         }
         
     }
+    pthread_mutex_lock(&minCElement_mutex);
+    if(minCElement.value < minCElementGlobal.value)
+    {
+        minCElementGlobal.value = minCElement.value;
+        minCElementGlobal.row = minCElement.row;
+        minCElementGlobal.col = minCElement.col;
+    }
+    pthread_mutex_unlock(&minCElement_mutex);
     
 }
 int main(){
@@ -149,6 +175,7 @@ int main(){
     struct timeval start_time, end_time;
     double exec_time;
     float minCArray[MATRIX_SIZE];
+    minCElementGlobal.value = FLT_MAX;
 
     pthread_t thread_id[NUM_THREADS];
     struct thread_args thread_args[NUM_THREADS];
@@ -173,8 +200,8 @@ int main(){
     {
         for (int j = 0; j < MATRIX_SIZE; j++)
         {   
-            A[i][j] = (float)rand();// / (float)(RAND_MAX/10.0);
-            B[i][j] = (float)rand();// / (float)(RAND_MAX/10.0);
+            A[i][j] = (float)rand() / (float)(RAND_MAX/10.0);
+            B[i][j] = (float)rand() / (float)(RAND_MAX/10.0);
             C[i][j] = (float)0;
         }
         
@@ -223,14 +250,16 @@ int main(){
     #endif
     
     
-    checkMatrixResult(A, B, C);
+    
     #if DEBUG
         
         //Print matric C
         printf("\n\nPrinting C...\n");
         printMatrix(C);
     #endif
-    
+
+    checkMatrixResult(A, B, C);
+
     exec_time = (double)(end_time.tv_sec - start_time.tv_sec) + (double)(end_time.tv_usec - start_time.tv_usec)/(double)1000000;
 
     printf("Execution time - %f\n", exec_time);
@@ -239,7 +268,7 @@ int main(){
 
     printf("NUM_THREADS - %d\n", NUM_THREADS);
 
-    // printf("Minimim value in matrix C (value, row, column) - (%f, %d, %d)\n", minCElement, row, col);
+    printf("Minimim value in matrix C (value, row, column) - (%f, %d, %d)\n", minCElementGlobal.value, minCElementGlobal.row, minCElementGlobal.col);
     
     free(A);
     free(B);
