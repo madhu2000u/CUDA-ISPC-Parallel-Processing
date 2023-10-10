@@ -29,7 +29,6 @@ struct thread_args
     float (*B)[MATRIX_SIZE];
     float (*C)[MATRIX_SIZE];
     int row_start, row_end;
-    float* minC;
 };
 
 void printMatrix(float mat[][MATRIX_SIZE]){
@@ -99,12 +98,12 @@ void checkMatrixResult(float A[][MATRIX_SIZE], float B[][MATRIX_SIZE], float res
     }
     if(abs(ref_min.value - minCElementGlobal.value) > threshold)
     {
-        printf("Incorrect min value! [(ref, row, col) : (result, row, col)] - [(%f, %f, %f) : (%f, %f, %f)]\n", ref_min.value, ref_min.row, ref_min.col, minCElementGlobal.value, minCElementGlobal.row, minCElementGlobal.col);
+        printf("Incorrect min value! [(ref, row, col) : (result, row, col)] - [(%f, %d, %d) : (%f, %d, %d)]\n", ref_min.value, ref_min.row, ref_min.col, minCElementGlobal.value, minCElementGlobal.row, minCElementGlobal.col);
 
     }
     else if(ref_min.row != minCElementGlobal.row)
     {
-        printf("Incorrect row index!\n");
+        printf("Incorrect row index! [(ref, row, col) : (result, row, col)] - [(%f, %d, %d) : (%f, %d, %d)]\n", ref_min.value, ref_min.row, ref_min.col, minCElementGlobal.value, minCElementGlobal.row, minCElementGlobal.col);
     }
     else if(ref_min.col != minCElementGlobal.col)
     {
@@ -142,7 +141,7 @@ void* transposeMatrixAndMultiply(void* curr_thread_args)
     struct matElement minCElement;
     minCElement.value = FLT_MAX;
 
-    for (int i = args->row_start; i < (args->row_end - 1); i++)
+    for (int i = args->row_start; i < args->row_end; i++)
     {   
         float temp = 0;
         for (int j = i + 1; j < MATRIX_SIZE; j++)
@@ -192,13 +191,13 @@ int main(){
     unsigned long long start, end;
     struct timeval start_time, end_time;
     double exec_time;
-    float minCArray[MATRIX_SIZE];
     minCElementGlobal.value = FLT_MAX;
 
     pthread_t thread_id[NUM_THREADS];
     struct thread_args thread_args[NUM_THREADS];
     pthread_barrier_init(&barrier, NULL, NUM_THREADS);
 
+    //Work decomposition
     float matrixSizeByNumThreads = (float)MATRIX_SIZE/(float)NUM_THREADS;
     float ceilFloatAvg = (ceil(matrixSizeByNumThreads) + floor(matrixSizeByNumThreads))/2.0;
     int threadWorkRows = (matrixSizeByNumThreads > ceilFloatAvg) ? ceil(matrixSizeByNumThreads) : floor(matrixSizeByNumThreads);
@@ -232,8 +231,6 @@ int main(){
         printf("\n\nPrinting B...\n");
         printMatrix(B);
     #endif
-
-    // transposeMatrix(B);
     
     gettimeofday(&start_time, NULL);
     
@@ -244,7 +241,6 @@ int main(){
         thread_args[i].C = C;
         thread_args[i].row_start = i * threadWorkRows;
         thread_args[i].row_end = thread_args[i].row_start + threadWorkRows;
-        thread_args[i].minC = minCArray;
         rowsDispatchPending -= threadWorkRows;
         pthread_create(&thread_id[i], NULL, transposeMatrixAndMultiply, (void*)&thread_args[i]);
     }
@@ -253,10 +249,9 @@ int main(){
     thread_args[NUM_THREADS - 1].C = C;
     thread_args[NUM_THREADS - 1].row_start = (NUM_THREADS - 1) * threadWorkRows;
     thread_args[NUM_THREADS - 1].row_end = thread_args[NUM_THREADS - 1].row_start + rowsDispatchPending;
-    thread_args[NUM_THREADS - 1].minC = minCArray;
     pthread_create(&thread_id[NUM_THREADS - 1], NULL, transposeMatrixAndMultiply, (void*)&thread_args[NUM_THREADS - 1]);
     
-    for (int i = 0; i < NUM_THREADS - 1; i++)
+    for (int i = 0; i < NUM_THREADS; i++)
     {
         pthread_join(thread_id[i], NULL);
     }

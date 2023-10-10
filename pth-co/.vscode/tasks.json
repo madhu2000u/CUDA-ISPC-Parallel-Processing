@@ -12,7 +12,7 @@
                 "${fileDirname}/${fileBasenameNoExtension}",
                 "-lm",
                 "-pthread",
-                "--std=c99"
+                "--std=gnu99"
             ],
             "options": {
                 "cwd": "${fileDirname}"
