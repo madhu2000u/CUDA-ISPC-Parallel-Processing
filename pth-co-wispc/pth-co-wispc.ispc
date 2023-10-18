@@ -47,13 +47,13 @@ export void matrixTransposeAndMultiply(uniform int row_start, uniform int row_en
             for(int k = 0; k < MATRIX_SIZE; k++)
             {
                 matC[i][j] += matA[i][k] * matB[j][k];
-                print("\nrow = %, col = % : values = % * %", i, j, matA[i][k], matB[j][k]);
+                //print("\nrow = %, col = % : values = % * %", i, j, matA[i][k], matB[j][k]);
                 // print("\n(row, col) - (%, %) : values - (% * %)", i, j, matA[i][k], matB[j][k]);
-                if(k < MATRIX_SIZE - 1) print("\nrow = %, col = %: +", i, j);
+                // if(k < MATRIX_SIZE - 1) print("\nrow = %, col = %: +", i, j);
                 
 
             }
-            print("\n%-----C{%}-----{%} done", matC[i][j], i, j);
+            //print("\n%-----C{%}-----{%} done", matC[i][j], i, j);
             if(matC[i][j] < minEachC.value){ 
                 minEachC.value = matC[i][j];
                 minEachC.row = i;
@@ -62,7 +62,7 @@ export void matrixTransposeAndMultiply(uniform int row_start, uniform int row_en
             }
         }
         minCElementThread[i] = minEachC;       // Each lane computes it's own min value of it's corrsponding row of the multiplication. So we would have MATRIX_SIZE number of min values
-        print("\nrow = % : MinThread[i] - %", i, minCElementThread[i].value);
+        //print("\nrow = % : MinThread[i] - %", i, minCElementThread[i].value);
     }
 
     // foreach(i = 0 ... MATRIX_SIZE)

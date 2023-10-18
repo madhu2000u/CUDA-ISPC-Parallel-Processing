@@ -9,7 +9,7 @@
 #include "pth-co-wispc.h"
 #include "my_ispc-common.h"
 
-#define NUM_THREADS 4
+#define NUM_THREADS 32
 
 pthread_mutex_t minCElement_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -85,18 +85,18 @@ void checkMatrixResult(float A[][MATRIX_SIZE], float B[][MATRIX_SIZE], float res
     {
         for (int j = 0; j < MATRIX_SIZE; j++)
         {   
-            printf("\t%f\t", fabs(ref_matrix[i][j] - result_matrix[i][j]));
+            //printf("\t%f\t", fabs(ref_matrix[i][j] - result_matrix[i][j]));
             // float absV = abs(ref_matrix[i][j] - result_matrix[i][j]);
             if(fabs(ref_matrix[i][j] - result_matrix[i][j]) > threshold)
             {
                 check = false;
-                printf("\nfirst not match at (%d, %d)", i, j);
-                printf("\nref(%f) : result(%f)\n", ref_matrix[i][j], result_matrix[i][j]);
+                //printf("\nfirst not match at (%d, %d)", i, j);
+                //printf("\nref(%f) : result(%f)\n", ref_matrix[i][j], result_matrix[i][j]);
                 break;
             }
             
         }
-        printf("\n");
+        // printf("\n");
         
     }
     if(abs(ref_min.value - minCElementGlobal.value) > threshold)
@@ -145,10 +145,14 @@ void* transposeMatrixAndMultiply(void* thread_args)
     //int minValue, minValueRow, minValeCol;
     matrixTransposeAndMultiply(curr_thread_args->row_start, curr_thread_args->row_end, curr_thread_args->A, curr_thread_args->B, curr_thread_args->C, minCElementThread);
 
-    float minValue = minCElementThread[curr_thread_args->row_start].value;
-    for(int i = curr_thread_args->row_start + 1; i < curr_thread_args->row_end; i++)
+    float minValue = FLT_MAX;
+    for(int i = curr_thread_args->row_start; i < curr_thread_args->row_end; i++)
     {
-        if(minCElementThread[i].value < minValue) minIndex = i;
+        if(minCElementThread[i].value < minValue)
+        {
+            minIndex = i;
+            minValue = minCElementThread[i].value;
+        }
     }
     pthread_mutex_lock(&minCElement_mutex);
     if(minCElementThread[minIndex].value < minCElementGlobal.value)
@@ -244,44 +248,44 @@ int main(){
 
     srand(time(NULL));
     //Matrix initializations
-    // for (int i = 0; i < MATRIX_SIZE; i++)
-    // {
-    //     for (int j = 0; j < MATRIX_SIZE; j++)
-    //     {   
-    //         A[i][j] = (float)rand() / (float)(RAND_MAX/10.0);
-    //         B[i][j] = (float)rand() / (float)(RAND_MAX/10.0);
-    //         C[i][j] = (float)0;
-    //     }
-        
-    // }
-    float valuesA[8][8] = {
-        {2.832760, 3.793120, 9.574671, 5.295732, 7.831551, 0.150374, 4.652997, 9.813563},
-        {3.162790, 1.058754, 6.093533, 6.824106, 2.250762, 9.186578, 1.429508, 1.960541},
-        {5.724546, 5.430489, 1.585739, 3.719144, 6.881629, 0.672626, 7.088305, 1.433614},
-        {4.315629, 6.741438, 1.274757, 5.307220, 6.705943, 5.501635, 2.910164, 2.397719},
-        {3.215838, 3.933928, 8.554430, 4.218867, 1.522590, 6.970685, 5.377682, 8.861990},
-        {0.896669, 0.102472, 9.168971, 5.696945, 9.903490, 4.010366, 8.660756, 1.448365},
-        {4.236294, 6.678172, 3.035366, 8.226785, 5.788532, 3.168851, 3.601771, 0.859524},
-        {7.634268, 6.669865, 6.371688, 2.678154, 3.565389, 9.088833, 3.096606, 4.102741}
-    };
-
-    float valuesB[8][8] = {
-        {7.308180, 3.829439, 5.753661, 2.492368, 7.828209, 5.603428, 5.382293, 0.961996},
-        {1.168221, 6.490343, 5.299218, 0.409161, 4.801577, 2.171426, 2.790725, 6.803239},
-        {5.832077, 8.782389, 0.726222, 3.565544, 7.653072, 5.409692, 0.897039, 2.366810},
-        {8.419926, 4.898059, 9.417290, 3.525519, 5.436060, 5.874915, 4.557956, 6.275179},
-        {6.155407, 3.140399, 3.869518, 4.493798, 4.891493, 1.198580, 5.197471, 6.688520},
-        {1.255336, 1.976116, 1.534626, 8.135451, 8.610894, 2.813655, 1.166214, 2.226146},
-        {3.218787, 8.416366, 0.486189, 7.462177, 8.404300, 6.408085, 2.030840, 0.537199},
-        {9.898988, 4.262268, 0.251095, 8.634710, 9.693310, 1.876595, 4.498439, 7.332900}
-    };
-
-    for (int i = 0; i < 8; i++) {
-        for (int j = 0; j < 8; j++) {
-            A[i][j] = valuesA[i][j];
-            B[i][j] = valuesB[i][j];
+    for (int i = 0; i < MATRIX_SIZE; i++)
+    {
+        for (int j = 0; j < MATRIX_SIZE; j++)
+        {   
+            A[i][j] = (float)rand() / (float)(RAND_MAX/10.0);
+            B[i][j] = (float)rand() / (float)(RAND_MAX/10.0);
+            C[i][j] = (float)0;
         }
+        
     }
+    // float valuesA[8][8] = {
+    //     {2.832760, 3.793120, 9.574671, 5.295732, 7.831551, 0.150374, 4.652997, 9.813563},
+    //     {3.162790, 1.058754, 6.093533, 6.824106, 2.250762, 9.186578, 1.429508, 1.960541},
+    //     {5.724546, 5.430489, 1.585739, 3.719144, 6.881629, 0.672626, 7.088305, 1.433614},
+    //     {4.315629, 6.741438, 1.274757, 5.307220, 6.705943, 5.501635, 2.910164, 2.397719},
+    //     {3.215838, 3.933928, 8.554430, 4.218867, 1.522590, 6.970685, 5.377682, 8.861990},
+    //     {0.896669, 0.102472, 9.168971, 5.696945, 9.903490, 4.010366, 8.660756, 1.448365},
+    //     {4.236294, 6.678172, 3.035366, 8.226785, 5.788532, 3.168851, 3.601771, 0.859524},
+    //     {7.634268, 6.669865, 6.371688, 2.678154, 3.565389, 9.088833, 3.096606, 4.102741}
+    // };
+
+    // float valuesB[8][8] = {
+    //     {7.308180, 3.829439, 5.753661, 2.492368, 7.828209, 5.603428, 5.382293, 0.961996},
+    //     {1.168221, 6.490343, 5.299218, 0.409161, 4.801577, 2.171426, 2.790725, 6.803239},
+    //     {5.832077, 8.782389, 0.726222, 3.565544, 7.653072, 5.409692, 0.897039, 2.366810},
+    //     {8.419926, 4.898059, 9.417290, 3.525519, 5.436060, 5.874915, 4.557956, 6.275179},
+    //     {6.155407, 3.140399, 3.869518, 4.493798, 4.891493, 1.198580, 5.197471, 6.688520},
+    //     {1.255336, 1.976116, 1.534626, 8.135451, 8.610894, 2.813655, 1.166214, 2.226146},
+    //     {3.218787, 8.416366, 0.486189, 7.462177, 8.404300, 6.408085, 2.030840, 0.537199},
+    //     {9.898988, 4.262268, 0.251095, 8.634710, 9.693310, 1.876595, 4.498439, 7.332900}
+    // };
+
+    // for (int i = 0; i < 8; i++) {
+    //     for (int j = 0; j < 8; j++) {
+    //         A[i][j] = valuesA[i][j];
+    //         B[i][j] = valuesB[i][j];
+    //     }
+    // }
 
     
     gettimeofday(&start_time, NULL);
@@ -331,7 +335,7 @@ int main(){
         printMatrix(C);
     #endif
 
-    checkMatrixResult(A, B, C);
+    // checkMatrixResult(A, B, C);
 
     exec_time = (double)(end_time.tv_sec - start_time.tv_sec) + (double)(end_time.tv_usec - start_time.tv_usec)/(double)1000000;
 
