@@ -26,7 +26,7 @@ ispc:$(ISPC_SRC)
 
 
 run:all
-	./$(TARGET) > output.txt
+	./$(TARGET) $(ARGS) > output.txt
 
 clean:
 	rm $(TARGET) $(ISPC_OBJ) $(ISPC_H)

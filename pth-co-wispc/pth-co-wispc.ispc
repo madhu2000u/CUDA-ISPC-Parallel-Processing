@@ -4,10 +4,9 @@
 
 //Frustrating bug - when multithreading, each thread transposes its own part of the matrix and starts multiplication without checking if the entire transpose is done or not. that seems to be the freaking error!!!! use two different ispc functions and use pthread barries in main program.
 //Tested with matrix size 4 and 2 threads
-export void matrixTransposeAndMultiply(uniform int threadId, uniform int row_start, uniform int row_end, uniform float (matA)[MATRIX_SIZE][MATRIX_SIZE], uniform float matB[MATRIX_SIZE][MATRIX_SIZE], uniform float matC[MATRIX_SIZE][MATRIX_SIZE], uniform struct matElement minCElementThread[MATRIX_SIZE])// uniform float minVale, uniform int minValueRow, uniform int minValueCol)
-{   
-    // uniform struct matElement* minResultC = (struct matElement*) malloc((row_end - row_start) * sizeof(struct matElement));
-    // float temp = 0;
+
+export void matrixTransposeISPC(uniform int row_start, uniform int row_end, uniform float (matA)[MATRIX_SIZE][MATRIX_SIZE], uniform float matB[MATRIX_SIZE][MATRIX_SIZE], uniform float matC[MATRIX_SIZE][MATRIX_SIZE])
+{
     foreach(i = row_start ... row_end)
     {
         float temp = 0;
@@ -24,6 +23,12 @@ export void matrixTransposeAndMultiply(uniform int threadId, uniform int row_sta
             // print("\nrow = %, col = %\n\n",i, j);
         }
     }
+}
+
+
+export void matrixMultiplyISPC(uniform int threadId, uniform int row_start, uniform int row_end, uniform float (matA)[MATRIX_SIZE][MATRIX_SIZE], uniform float matB[MATRIX_SIZE][MATRIX_SIZE], uniform float matC[MATRIX_SIZE][MATRIX_SIZE], uniform struct matElement minCElementThread[MATRIX_SIZE])// uniform float minVale, uniform int minValueRow, uniform int minValueCol)
+{   
+    
 
     // gi=i*N+j
     
@@ -48,7 +53,6 @@ export void matrixTransposeAndMultiply(uniform int threadId, uniform int row_sta
     minEachC.value = FLT_MAX;
     foreach(i = row_start ... row_end)  // Each SIMD lane gets assigned its own i value. so if 16 lanes in avx512 then in parllel all 16 lanes will have i from 0 to 15 respectively
     {
-           // Varying(vector) variable that is different for different SIMD lanes.
         for(int j = 0; j < MATRIX_SIZE; j++)
         {
             for(int k = 0; k < MATRIX_SIZE; k++)
