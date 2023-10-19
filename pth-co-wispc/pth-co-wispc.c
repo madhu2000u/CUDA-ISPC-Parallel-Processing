@@ -9,7 +9,7 @@
 #include "pth-co-wispc.h"
 #include "my_ispc-common.h"
 
-#define NUM_THREADS 32
+#define NUM_THREADS 4
 
 pthread_mutex_t minCElement_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -23,14 +23,14 @@ struct matElement minCElementGlobal;
 struct matElement minCElementThread[MATRIX_SIZE];
 struct thread_args
 {   
-    float (*A)[MATRIX_SIZE];
-    float (*B)[MATRIX_SIZE];
-    float (*C)[MATRIX_SIZE];
+    float (*A)[MATRIX_SIZE][MATRIX_SIZE];
+    float (*B)[MATRIX_SIZE][MATRIX_SIZE];
+    float (*C)[MATRIX_SIZE][MATRIX_SIZE];
     int row_start, row_end;
     
 };
 
-void printMatrix(float mat[][MATRIX_SIZE]){
+void printMatrix(float mat[MATRIX_SIZE][MATRIX_SIZE]){
     for (int i = 0; i < MATRIX_SIZE; i++)
     {
         for (int j = 0; j < MATRIX_SIZE; j++)
@@ -49,7 +49,7 @@ unsigned long long rdtsc() {
     return ((unsigned long long)hi << 32) | lo;
 }
 
-void checkMatrixResult(float A[][MATRIX_SIZE], float B[][MATRIX_SIZE], float result_matrix[][MATRIX_SIZE])
+void checkMatrixResult(float A[MATRIX_SIZE][MATRIX_SIZE], float B[MATRIX_SIZE][MATRIX_SIZE], float result_matrix[MATRIX_SIZE][MATRIX_SIZE])
 {
     bool check = true;
     double threshold = 1.0E-2;
@@ -143,7 +143,7 @@ void* transposeMatrixAndMultiply(void* thread_args)
     int minIndex;
     // struct matElement minCElementThread[curr_thread_args->row_end - curr_thread_args->row_start];
     //int minValue, minValueRow, minValeCol;
-    matrixTransposeAndMultiply(curr_thread_args->row_start, curr_thread_args->row_end, curr_thread_args->A, curr_thread_args->B, curr_thread_args->C, minCElementThread);
+    matrixTransposeAndMultiply(pthread_self(), curr_thread_args->row_start, curr_thread_args->row_end, curr_thread_args->A, curr_thread_args->B, curr_thread_args->C, minCElementThread);
 
     float minValue = FLT_MAX;
     for(int i = curr_thread_args->row_start; i < curr_thread_args->row_end; i++)
@@ -237,9 +237,9 @@ int main(){
     int rowsDispatchPending = MATRIX_SIZE;
 
 
-    float (*A)[MATRIX_SIZE] = malloc(sizeof(float[MATRIX_SIZE][MATRIX_SIZE]));
-    float (*B)[MATRIX_SIZE] = malloc(sizeof(float[MATRIX_SIZE][MATRIX_SIZE]));
-    float (*C)[MATRIX_SIZE] = malloc(sizeof(float[MATRIX_SIZE][MATRIX_SIZE]));
+    float (*A)[MATRIX_SIZE][MATRIX_SIZE] = malloc(MATRIX_SIZE * MATRIX_SIZE * sizeof(float));
+    float (*B)[MATRIX_SIZE][MATRIX_SIZE] = malloc(MATRIX_SIZE * MATRIX_SIZE * sizeof(float));
+    float (*C)[MATRIX_SIZE][MATRIX_SIZE] = malloc(MATRIX_SIZE * MATRIX_SIZE * sizeof(float));
 
     if(!A || !B || !C) {
         printf("Memrory allocation falied");
@@ -252,9 +252,9 @@ int main(){
     {
         for (int j = 0; j < MATRIX_SIZE; j++)
         {   
-            A[i][j] = (float)rand() / (float)(RAND_MAX/10.0);
-            B[i][j] = (float)rand() / (float)(RAND_MAX/10.0);
-            C[i][j] = (float)0;
+            (*A)[i][j] = (float)(i + 1);// (float)rand() / (float)(RAND_MAX/10.0);
+            (*B)[i][j] = (float)j + 1;//(float)rand() / (float)(RAND_MAX/10.0);
+            (*C)[i][j] = (float)0;
         }
         
     }
@@ -287,6 +287,13 @@ int main(){
     //     }
     // }
 
+        #if DEBUG
+        printf("\n\nPrinting A...\n");
+        printMatrix(A);
+        printf("\n\nPrinting B...\n");
+        printMatrix(B);
+    #endif
+
     
     gettimeofday(&start_time, NULL);
     
@@ -317,10 +324,6 @@ int main(){
 
 
     #if DEBUG
-        printf("\n\nPrinting A...\n");
-        printMatrix(A);
-        printf("\n\nPrinting B...\n");
-        printMatrix(B);
         //Print transposed matrix
         printf("\n\nPrinting transposed matrix B...\n");
         printMatrix(B);
@@ -335,7 +338,7 @@ int main(){
         printMatrix(C);
     #endif
 
-    // checkMatrixResult(A, B, C);
+    checkMatrixResult(A, B, C);
 
     exec_time = (double)(end_time.tv_sec - start_time.tv_sec) + (double)(end_time.tv_usec - start_time.tv_usec)/(double)1000000;
 
