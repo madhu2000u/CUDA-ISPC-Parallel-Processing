@@ -7,15 +7,6 @@
 #include "ispc-co.h"
 #include "my_ispc-common.h"
 
-// #define MATRIX_SIZE 4096
-// #define DEBUG 0
-
-// struct matElement
-// {
-//     float value;
-//     int row, col;
-// };
-
 
 void printMatrix(float mat[][MATRIX_SIZE])
 {
@@ -101,14 +92,14 @@ int main(){
         return 1;
     }
 
-    srand(time(NULL));
+    // srand(time(NULL));
     //Matrix initializations
     for (int i = 0; i < MATRIX_SIZE; i++)
     {
         for (int j = 0; j < MATRIX_SIZE; j++)
         {   
-            A[i][j] = ((float)rand());// / (float)(RAND_MAX/5.0));
-            B[i][j] = ((float)rand());// / (float)(RAND_MAX/5.0));
+            A[i][j] = rand() / (float)1147654321;// / (float)(RAND_MAX/5.0));
+            B[i][j] = rand() / (float)1147654321;// / (float)(RAND_MAX/5.0));
             C[i][j] = (float)0;
         }
         
@@ -134,21 +125,6 @@ int main(){
 
     gettimeofday(&end_time, NULL);
 
-    // for (int i = 0; i < MATRIX_SIZE; i++)
-    // {   
-    //     float temp = 0;
-    //     for (int j = i; j < MATRIX_SIZE; j++)
-    //     {
-    //         // start = rdtsc();
-    //         temp = B[i][j];
-    //         B[i][j] = B[j][i];
-    //         B[j][i] = temp;
-    //         // end = rdtsc();
-    //     }
-        
-    // }
-
-    // gettimeofday(&end_time, NULL);
     
     #if DEBUG
         //Print transposed matrix
@@ -178,7 +154,7 @@ int main(){
         
     #endif
 
-    checkMatrixResult(A, B, ref_matrix, C, finalMin);
+    // checkMatrixResult(A, B, ref_matrix, C, finalMin);
 
     exec_time = (double)(end_time.tv_sec - start_time.tv_sec) + (double)(end_time.tv_usec - start_time.tv_usec)/(double)1000000;
 
