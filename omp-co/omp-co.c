@@ -7,10 +7,9 @@
 #include <stdbool.h>
 #include <omp.h>
 
-#define MATRIX_SIZE 2048
+#define MATRIX_SIZE 4096
 #define DEBUG 0
 #define CHECK 0
-#define NUM_THREADS 16
 
 
 struct matElement
@@ -156,7 +155,7 @@ void transposeMatrixAndMultiply(float A[][MATRIX_SIZE], float B[][MATRIX_SIZE], 
         }
         // }
     
-    #pragma omp barrier
+    // #pragma omp barrier
 
     #pragma omp parallel
     {   
@@ -184,25 +183,34 @@ void transposeMatrixAndMultiply(float A[][MATRIX_SIZE], float B[][MATRIX_SIZE], 
 
         }
         #pragma omp critical
+        {
             if(minCElement.value < minCElementGlobal.value)
             {
                 minCElementGlobal.value = minCElement.value;
                 minCElementGlobal.row = minCElement.row;
                 minCElementGlobal.col = minCElement.col;
             }
+        }
         // printf("I am thread %d still active\n", omp_get_thread_num());
     }
     // printf("I am thread %d still active\n", omp_get_thread_num());
     
     
 }
-int main(){
+int main(int argc, char* argv[]){
     unsigned long long start, end;
     struct timeval start_time, end_time;
     double exec_time;
     minCElementGlobal.value = FLT_MAX;
+    int num_threads;
     
-    omp_set_num_threads(NUM_THREADS);
+        if(argc < 2)
+    {
+        printf("Required arguments not given\nUsage:\nnum_threads: int");
+        return 1;
+    }
+    num_threads = atoi(argv[1]); 
+    omp_set_num_threads(num_threads);
     
     float (*A)[MATRIX_SIZE] = malloc(sizeof(float[MATRIX_SIZE][MATRIX_SIZE]));
     float (*B)[MATRIX_SIZE] = malloc(sizeof(float[MATRIX_SIZE][MATRIX_SIZE]));
@@ -213,14 +221,14 @@ int main(){
         return 1;
     }
 
-    srand(time(NULL));
+    // srand(time(NULL));
     //Matrix initializations
     for (int i = 0; i < MATRIX_SIZE; i++)
     {
         for (int j = 0; j < MATRIX_SIZE; j++)
         {   
-            A[i][j] = (float)rand() / (float)(RAND_MAX/10.0);
-            B[i][j] = (float)rand() / (float)(RAND_MAX/10.0);
+            A[i][j] = rand() / (float)1147654321;
+            B[i][j] = rand() / (float)1147654321;
             C[i][j] = (float)0;
         }
         
@@ -264,7 +272,7 @@ int main(){
     
     printf("Matrix size - %d\n", MATRIX_SIZE);
 
-    printf("NUM_THREADS - %d\n", NUM_THREADS);
+    printf("num_threads - %d\n", num_threads);
 
     printf("Minimim value in matrix C (value, row, column) - (%f, %d, %d)\n", minCElementGlobal.value, minCElementGlobal.row, minCElementGlobal.col);
     
