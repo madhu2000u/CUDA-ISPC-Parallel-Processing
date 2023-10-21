@@ -12,7 +12,7 @@ $(TARGET):$(SRC)
 	$(CC) $(CFLAGS) $(SRC) -o $(TARGET) -lm -pthread
 
 run:all
-	./$(TARGET)
+	./$(TARGET) $(ARGS)
 
 clean:
 	rm $(TARGET)

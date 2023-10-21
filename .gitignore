@@ -4,3 +4,4 @@
 .nfs*
 ispc
 !my_*.h
+*.txt

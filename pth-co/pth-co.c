@@ -7,9 +7,8 @@
 #include <stdbool.h>
 #include <pthread.h>
 
-#define MATRIX_SIZE 4
-#define DEBUG 1
-#define NUM_THREADS 2
+#define MATRIX_SIZE 4096
+#define DEBUG 0
 
 
 pthread_mutex_t minCElement_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -155,7 +154,6 @@ void* transposeMatrixAndMultiply(void* curr_thread_args)
         
     }
 
-    //TODO barrier here
     pthread_barrier_wait(&barrier);
 
     for (int i = args->row_start; i < args->row_end; i++)
@@ -164,7 +162,6 @@ void* transposeMatrixAndMultiply(void* curr_thread_args)
         {
             for (int k = 0; k < MATRIX_SIZE; k++)
             {
-                // args->C[i][j] = pthread_self() ;
                 args->C[i][j] += args->A[i][k] * args->B[j][k];
             }
             if(args->C[i][j] < minCElement.value)
@@ -187,21 +184,29 @@ void* transposeMatrixAndMultiply(void* curr_thread_args)
     pthread_mutex_unlock(&minCElement_mutex);
     
 }
-int main(){
+int main(int argc, char* argv[]){
     unsigned long long start, end;
     struct timeval start_time, end_time;
     double exec_time;
     minCElementGlobal.value = FLT_MAX;
+    int num_threads;
 
-    pthread_t thread_id[NUM_THREADS];
-    struct thread_args thread_args[NUM_THREADS];
-    pthread_barrier_init(&barrier, NULL, NUM_THREADS);
+    if(argc < 2)
+    {
+        printf("Required arguments not given\nUsage:\nnum_threads: int");
+        return 1;
+    }
+    num_threads = atoi(argv[1]);
+    printf("num argc - %d\n", num_threads);
+
+    pthread_t thread_id[num_threads];
+    struct thread_args thread_args[num_threads];
+    pthread_barrier_init(&barrier, NULL, num_threads);
 
     //Work decomposition
-    float matrixSizeByNumThreads = (float)MATRIX_SIZE/(float)NUM_THREADS;
+    float matrixSizeByNumThreads = (float)MATRIX_SIZE/(float)num_threads;
     float ceilFloatAvg = (ceil(matrixSizeByNumThreads) + floor(matrixSizeByNumThreads))/2.0;
     int threadWorkRows = (matrixSizeByNumThreads > ceilFloatAvg) ? ceil(matrixSizeByNumThreads) : floor(matrixSizeByNumThreads);
-    int rowsDispatchPending = MATRIX_SIZE;
 
     float (*A)[MATRIX_SIZE] = malloc(sizeof(float[MATRIX_SIZE][MATRIX_SIZE]));
     float (*B)[MATRIX_SIZE] = malloc(sizeof(float[MATRIX_SIZE][MATRIX_SIZE]));
@@ -212,14 +217,14 @@ int main(){
         return 1;
     }
 
-    srand(time(NULL));
+    // srand(time(NULL));
     //Matrix initializations
     for (int i = 0; i < MATRIX_SIZE; i++)
     {
         for (int j = 0; j < MATRIX_SIZE; j++)
         {   
-            A[i][j] = (float)rand() / (float)(RAND_MAX/10.0);
-            B[i][j] = (float)rand() / (float)(RAND_MAX/10.0);
+            A[i][j] = rand() / (float)1147654321;
+            B[i][j] = rand() / (float)1147654321;
             C[i][j] = (float)0;
         }
         
@@ -234,24 +239,17 @@ int main(){
     
     gettimeofday(&start_time, NULL);
     
-    for (int i = 0; i < NUM_THREADS - 1; i++)
+    for (int i = 0; i < num_threads; i++)
     {   
         thread_args[i].A = A;
         thread_args[i].B = B;
         thread_args[i].C = C;
         thread_args[i].row_start = i * threadWorkRows;
-        thread_args[i].row_end = thread_args[i].row_start + threadWorkRows;
-        rowsDispatchPending -= threadWorkRows;
+        thread_args[i].row_end = (i == num_threads - 1) ? MATRIX_SIZE : thread_args[i].row_start + threadWorkRows;
         pthread_create(&thread_id[i], NULL, transposeMatrixAndMultiply, (void*)&thread_args[i]);
     }
-    thread_args[NUM_THREADS - 1].A = A;
-    thread_args[NUM_THREADS - 1].B = B;
-    thread_args[NUM_THREADS - 1].C = C;
-    thread_args[NUM_THREADS - 1].row_start = (NUM_THREADS - 1) * threadWorkRows;
-    thread_args[NUM_THREADS - 1].row_end = thread_args[NUM_THREADS - 1].row_start + rowsDispatchPending;
-    pthread_create(&thread_id[NUM_THREADS - 1], NULL, transposeMatrixAndMultiply, (void*)&thread_args[NUM_THREADS - 1]);
-    
-    for (int i = 0; i < NUM_THREADS; i++)
+
+    for (int i = 0; i < num_threads; i++)
     {
         pthread_join(thread_id[i], NULL);
     }
@@ -282,7 +280,7 @@ int main(){
     
     printf("Matrix size - %d\n", MATRIX_SIZE);
 
-    printf("NUM_THREADS - %d\n", NUM_THREADS);
+    printf("num_threads - %d\n", num_threads);
 
     printf("Minimim value in matrix C (value, row, column) - (%f, %d, %d)\n", minCElementGlobal.value, minCElementGlobal.row, minCElementGlobal.col);
     
