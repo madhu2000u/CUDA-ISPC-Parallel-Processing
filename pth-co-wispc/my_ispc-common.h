@@ -1,8 +1,8 @@
 #ifndef ISPC_COMMON_H
 #define ISPC_COMMON_H
 
-#define DEBUG 1
-#define MATRIX_SIZE 8
+#define DEBUG 0
+#define MATRIX_SIZE 4096
 
 #endif
 

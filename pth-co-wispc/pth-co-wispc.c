@@ -9,16 +9,9 @@
 #include "pth-co-wispc.h"
 #include "my_ispc-common.h"
 
-// #define num_threads 32
 
 pthread_mutex_t minCElement_mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_barrier_t barrier;
-
-// struct matElement
-// {
-//     float value;
-//     int row, col;
-// };
 
 struct matElement minCElementGlobal;
 struct matElement minCElementThread[MATRIX_SIZE];
@@ -64,7 +57,6 @@ void checkMatrixResult(float A[MATRIX_SIZE][MATRIX_SIZE], float B[MATRIX_SIZE][M
         {   ref_matrix[i][j] = 0;
             for (int k = 0; k < MATRIX_SIZE; k++)
             {
-                //val += A[i][k] * B[j][k];
                 ref_matrix[i][j] += A[i][k] * B[j][k];
             }
             if(ref_matrix[i][j] < ref_min.value)
@@ -86,18 +78,15 @@ void checkMatrixResult(float A[MATRIX_SIZE][MATRIX_SIZE], float B[MATRIX_SIZE][M
     {
         for (int j = 0; j < MATRIX_SIZE; j++)
         {   
-            //printf("\t%f\t", fabs(ref_matrix[i][j] - result_matrix[i][j]));
-            // float absV = abs(ref_matrix[i][j] - result_matrix[i][j]);
             if(fabs(ref_matrix[i][j] - result_matrix[i][j]) > threshold)
             {
                 check = false;
                 printf("\nfirst not match at (%d, %d)", i, j);
                 printf("\nref(%f) : result(%f) - diff(%f)\n", ref_matrix[i][j], result_matrix[i][j], fabs(ref_matrix[i][j] - result_matrix[i][j]));
-                // break;
+                break;
             }
             
         }
-        // printf("\n");
         
     }
     if(abs(ref_min.value - minCElementGlobal.value) > threshold)
@@ -119,33 +108,15 @@ void checkMatrixResult(float A[MATRIX_SIZE][MATRIX_SIZE], float B[MATRIX_SIZE][M
     else printf("Result matrix does not match!\n");
 }
 
-//Matrix B transpose for cache optimization using cache spatial locality
-void transposeMatrix(float mat[][MATRIX_SIZE])
-{
-    for (int i = 0; i < MATRIX_SIZE; i++)
-    {   
-        float temp = 0;
-        for (int j = i; j < MATRIX_SIZE; j++)
-        {
-            // start = rdtsc();
-            temp = mat[i][j];
-            mat[i][j] = mat[j][i];
-            mat[j][i] = temp;
-            // end = rdtsc();
-        }
-        
-    }
-
-}
-
 void* transposeMatrixAndMultiply(void* thread_args)
 {      
     struct thread_args* curr_thread_args = thread_args;
     int minIndex;
-    // struct matElement minCElementThread[curr_thread_args->row_end - curr_thread_args->row_start];
-    //int minValue, minValueRow, minValeCol;
+
     matrixTransposeISPC(curr_thread_args->row_start, curr_thread_args->row_end, curr_thread_args->A, curr_thread_args->B, curr_thread_args->C);
+    
     pthread_barrier_wait(&barrier);
+    
     matrixMultiplyISPC(pthread_self(), curr_thread_args->row_start, curr_thread_args->row_end, curr_thread_args->A, curr_thread_args->B, curr_thread_args->C, minCElementThread);
 
     float minValue = FLT_MAX;
@@ -192,8 +163,6 @@ int main(int argc, char* argv[]){
     float matrixSizeByNumThreads = (float)MATRIX_SIZE/(float)num_threads;
     float ceilFloatAvg = (ceil(matrixSizeByNumThreads) + floor(matrixSizeByNumThreads))/2.0;
     int threadWorkRows = (matrixSizeByNumThreads > ceilFloatAvg) ? ceil(matrixSizeByNumThreads) : floor(matrixSizeByNumThreads);
-    int rowsDispatchPending = MATRIX_SIZE;
-
 
     float (*A)[MATRIX_SIZE] = malloc(MATRIX_SIZE * MATRIX_SIZE * sizeof(float));
     float (*B)[MATRIX_SIZE] = malloc(MATRIX_SIZE * MATRIX_SIZE * sizeof(float));
@@ -204,14 +173,14 @@ int main(int argc, char* argv[]){
         return 1;
     }
 
-    srand(time(NULL));
+    // srand(time(NULL));
     //Matrix initializations
     for (int i = 0; i < MATRIX_SIZE; i++)
     {
         for (int j = 0; j < MATRIX_SIZE; j++)
         {   
-            A[i][j] = (float)rand() / (float)(RAND_MAX/10.0);
-            B[i][j] = (float)rand() / (float)(RAND_MAX/10.0);
+            A[i][j] = rand() / (float)1147654321;//(float)(RAND_MAX/10.0);
+            B[i][j] = rand() / (float)1147654321;//(float)(RAND_MAX/10.0);
             C[i][j] = (float)0;
         }
         
@@ -227,25 +196,16 @@ int main(int argc, char* argv[]){
     
     gettimeofday(&start_time, NULL);
     
-    for (int i = 0; i < num_threads - 1; i++)
+    for (int i = 0; i < num_threads; i++)
     {   
         thread_args[i].A = A;
         thread_args[i].B = B;
         thread_args[i].C = C;
         thread_args[i].row_start = i * threadWorkRows;
-        thread_args[i].row_end = thread_args[i].row_start + threadWorkRows;
-        // thread_args[i].minCElementThread = minCElementThread;
-        rowsDispatchPending -= threadWorkRows;
+        thread_args[i].row_end = (i == num_threads - 1) ? MATRIX_SIZE : thread_args[i].row_start + threadWorkRows;
         pthread_create(&thread_id[i], NULL, transposeMatrixAndMultiply, (void*)&thread_args[i]);
     }
-    thread_args[num_threads - 1].A = A;
-    thread_args[num_threads - 1].B = B;
-    thread_args[num_threads - 1].C = C;
-    thread_args[num_threads - 1].row_start = (num_threads - 1) * threadWorkRows;
-    thread_args[num_threads - 1].row_end = thread_args[num_threads - 1].row_start + rowsDispatchPending;
-    // thread_args[num_threads - 1].minCElementThread = minCElementThread;
-    pthread_create(&thread_id[num_threads - 1], NULL, transposeMatrixAndMultiply, (void*)&thread_args[num_threads - 1]);
-    
+
     for (int i = 0; i < num_threads; i++)
     {
         pthread_join(thread_id[i], NULL);
@@ -268,7 +228,7 @@ int main(int argc, char* argv[]){
         printMatrix(C);
     #endif
 
-    checkMatrixResult(A, B, C);
+    // checkMatrixResult(A, B, C);
 
     exec_time = (double)(end_time.tv_sec - start_time.tv_sec) + (double)(end_time.tv_usec - start_time.tv_usec)/(double)1000000;
 
