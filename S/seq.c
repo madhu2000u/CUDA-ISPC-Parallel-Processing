@@ -4,7 +4,7 @@
 #include <sys/time.h>
 #include <float.h>
 
-#define MATRIX_SIZE 2048
+#define MATRIX_SIZE 4096
 
 void printMatrix(float mat[][MATRIX_SIZE]){
     for (int i = 0; i < MATRIX_SIZE; i++)
@@ -34,14 +34,14 @@ int main(){
         return 1;
     }
 
-    srand(time(NULL));
+    // srand(time(NULL));
     //Matrix initializations
     for (int i = 0; i < MATRIX_SIZE; i++)
     {
         for (int j = 0; j < MATRIX_SIZE; j++)
         {
-            A[i][j] = (float)rand();// / (float)(RAND_MAX/10.0);
-            B[i][j] = (float)rand();// / (float)(RAND_MAX/10.0);
+            A[i][j] = rand() / (float)1147654321;// / (float)(RAND_MAX/10.0);
+            B[i][j] = rand() / (float)1147654321;// / (float)(RAND_MAX/10.0);
             C[i][j] = (float)0;
         }
         
