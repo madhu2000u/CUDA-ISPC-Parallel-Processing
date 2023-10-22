@@ -22,7 +22,7 @@ $(TARGET):$(SRC)
 $(SRC):$(ISPC)
 
 ispc:$(ISPC_SRC)
-	$(ISPC) -g $(ISPC_SRC) -o $(ISPC_OBJ) -h $(ISPC_H)
+	$(ISPC) -g  --target=avx512skx-i32x16 $(ISPC_SRC) -o $(ISPC_OBJ) -h $(ISPC_H)
 
 
 run:all
