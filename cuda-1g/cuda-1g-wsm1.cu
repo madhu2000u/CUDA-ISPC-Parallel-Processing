@@ -19,7 +19,7 @@
 typedef struct
 {
     float value;
-    int row, col;
+    int16_t row, col;
 
 } matElement;
 
@@ -37,33 +37,96 @@ void matrixInit(float *a, float *b, float *c)
     }
 }
 
-__global__ void tiledMatrixMultiply(float *a, float *b, float *c)
+__device__ void warpReduce(volatile matElement *sharedC, int threadId)
 {
-    int row = blockIdx.y * blockDim.y + threadIdx.y;
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    if(sharedC[threadId].value > sharedC[threadId + 32].value){
+        sharedC[threadId].value = sharedC[threadId + 32].value;
+        sharedC[threadId].row = sharedC[threadId + 32].row;
+        sharedC[threadId].col = sharedC[threadId + 32].col;
+    }
+
+    if(sharedC[threadId].value > sharedC[threadId + 16].value){
+        sharedC[threadId].value = sharedC[threadId + 16].value;
+        sharedC[threadId].row = sharedC[threadId + 16].row;
+        sharedC[threadId].col = sharedC[threadId + 16].col;
+    }
+
+    if(sharedC[threadId].value > sharedC[threadId + 8].value){
+        sharedC[threadId].value = sharedC[threadId + 8].value;
+        sharedC[threadId].row = sharedC[threadId + 8].row;
+        sharedC[threadId].col = sharedC[threadId + 8].col;
+    }
+
+    if(sharedC[threadId].value > sharedC[threadId + 4].value){
+        sharedC[threadId].value = sharedC[threadId + 4].value;
+        sharedC[threadId].row = sharedC[threadId + 4].row;
+        sharedC[threadId].col = sharedC[threadId + 4].col;
+    }
+
+    if(sharedC[threadId].value > sharedC[threadId + 2].value){
+        sharedC[threadId].value = sharedC[threadId + 2].value;
+        sharedC[threadId].row = sharedC[threadId + 2].row;
+        sharedC[threadId].col = sharedC[threadId + 2].col;
+    }
+
+    if(sharedC[threadId].value > sharedC[threadId + 1].value){
+        sharedC[threadId].value = sharedC[threadId + 1].value;
+        sharedC[threadId].row = sharedC[threadId + 1].row;
+        sharedC[threadId].col = sharedC[threadId + 1].col;
+    }
+}
+
+__global__ void tiledMatrixMultiply(float *a, float *b, float *c, matElement *d_minValueFromEachBlock)
+{
+    int16_t row = blockIdx.y * blockDim.y + threadIdx.y;
+    int16_t col = blockIdx.x * blockDim.x + threadIdx.x;
+
+    int16_t threadId = threadIdx.y * BLOCK_DIM + threadIdx.x;
 
     __shared__ float sharedA[BLOCK_DIM * BLOCK_DIM];
-    __shared__ float sharedB[BLOCK_DIM * BLOCK_DIM];
+    __shared__ float sharedB[BLOCK_DIM * BLOCK_DIM * sizeof(matElement)];                    
 
     float temp = 0;
-    matElement minElement;
-    minElement.value = __FLT_MAX__;
 
     for (int i = 0; i < MATRIX_SIZE / TILE_SZE; i++)
     {
-        sharedA[threadIdx.y * TILE_SZE + threadIdx.x] = a[row * MATRIX_SIZE + (i * TILE_SZE + threadIdx.x)];            //index into the global a with the global row (since we are tiling across x dimention of a) and each thread's tile 
-        sharedB[threadIdx.y * TILE_SZE + threadIdx.x] = b[(i * TILE_SZE + threadIdx.y) * MATRIX_SIZE + col];            //index into the global b with each thread's tile idexes (since we are tiling across y dimention of b) and globale column 
-        __syncthreads();                                                                                                //make sure all values of the sub-matrices are loaded by thre threads before proceding
+        sharedA[threadId] = a[row * MATRIX_SIZE + (i * TILE_SZE + threadIdx.x)];                 //index into the global a with the global row (since we are tiling across x dimention of a) and each thread's tile 
+        sharedB[threadId] = b[(i * TILE_SZE + threadIdx.y) * MATRIX_SIZE + col];                 //index into the global b with each thread's tile idexes (since we are tiling across y dimention of b) and globale column 
+        __syncthreads();                                                                         //make sure all values of the sub-matrices are loaded by thre threads before proceding
 
         for (int j = 0; j < TILE_SZE; j++)
         {
             temp += sharedA[threadIdx.y * TILE_SZE + j] * sharedB[j * TILE_SZE + threadIdx.x];
         }
 
-        __syncthreads();                                                                                                //make sure all sub-matrix calculation is done by threads before advancing to the next sub-matricies
-        c[row * MATRIX_SIZE + col] = temp;
-        
+        __syncthreads();                                                                         //make sure all sub-matrix calculation is done by threads before advancing to the next sub-matricies
 
+    }
+    matElement *newSharedB = (matElement*) sharedB;                                             //reuse shared mem for finding min element
+
+    newSharedB[threadId].value = temp;
+    newSharedB[threadId].row = row;
+    newSharedB[threadId].col = col;
+    
+    c[row * MATRIX_SIZE + col] = temp;
+
+    for (unsigned int stride = (BLOCK_DIM * BLOCK_DIM)/2; stride > 32; stride >>= 1)
+    {
+        if(threadId < stride)
+        {
+            if(newSharedB[threadId].value > newSharedB[threadId + stride].value){
+                newSharedB[threadId] = newSharedB[threadId + stride];
+            }
+        }
+        __syncthreads();
+    }
+
+    if(threadId < 32) warpReduce(newSharedB, threadId);
+
+    if(threadId == 0){   
+        d_minValueFromEachBlock[blockIdx.y * 128 + blockIdx.x].value = newSharedB[0].value;
+        d_minValueFromEachBlock[blockIdx.y * 128 + blockIdx.x].row = newSharedB[0].row;
+        d_minValueFromEachBlock[blockIdx.y * 128 + blockIdx.x].col = newSharedB[0].col;
     }
 
     
@@ -73,19 +136,26 @@ int main()
 {
     struct timeval start_time, end_time;
     double exec_time;
+    matElement minElement;
+    minElement.value = __FLT_MAX__;
 
     float *h_a, *h_b, *h_c;
     float *d_a, *d_b, *d_c;
+
+    matElement *h_minValueFromEachBlock;
+    matElement *d_minValueFromEachBlock;
 
     size_t size = MATRIX_SIZE * MATRIX_SIZE * sizeof(float);
 
     h_a = (float*)malloc(size);
     h_b = (float*)malloc(size);
     h_c = (float*)malloc(size);
+    h_minValueFromEachBlock = (matElement*)malloc((MATRIX_SIZE / BLOCK_DIM) * (MATRIX_SIZE / BLOCK_DIM) * sizeof(matElement));
 
     CHECK(cudaMallocHost(&d_a, size));
     CHECK(cudaMallocHost(&d_b, size));
     CHECK(cudaMallocHost(&d_c, size));
+    CHECK(cudaMallocHost(&d_minValueFromEachBlock, (MATRIX_SIZE / BLOCK_DIM) * (MATRIX_SIZE / BLOCK_DIM) * sizeof(matElement)));
 
     matrixInit(h_a, h_b, h_c);
 
@@ -98,11 +168,22 @@ int main()
     CHECK(cudaMemcpy(d_a, h_a, size, cudaMemcpyHostToDevice));
     CHECK(cudaMemcpy(d_b, h_b, size, cudaMemcpyHostToDevice));
     CHECK(cudaMemcpy(d_c, h_c, size, cudaMemcpyHostToDevice));
+    
 
-    tiledMatrixMultiply<<<blockPerGrid, threadsPerBlock>>>(d_a, d_b, d_c);
+    tiledMatrixMultiply<<<blockPerGrid, threadsPerBlock>>>(d_a, d_b, d_c, d_minValueFromEachBlock);
 
     CHECK(cudaMemcpy(h_c, d_c, size, cudaMemcpyDeviceToHost));
-
+    CHECK(cudaMemcpy(h_minValueFromEachBlock, d_minValueFromEachBlock, (MATRIX_SIZE / BLOCK_DIM) * (MATRIX_SIZE / BLOCK_DIM) * sizeof(matElement), cudaMemcpyDeviceToHost));
+    for (int i = 0; i < (MATRIX_SIZE / BLOCK_DIM) * (MATRIX_SIZE / BLOCK_DIM); i++)
+    {//printf("val - %f\n", h_minValueFromEachBlock[i].value);
+        if(h_minValueFromEachBlock[i].value < minElement.value)
+        {
+            minElement.value = h_minValueFromEachBlock[i].value;           
+            minElement.row = h_minValueFromEachBlock[i].row;
+            minElement.col = h_minValueFromEachBlock[i].col;
+        }
+    }
+    
     gettimeofday(&end_time, NULL);
 
     exec_time = (double)(end_time.tv_sec - start_time.tv_sec) + (double)(end_time.tv_usec - start_time.tv_usec)/(double)1000000;
@@ -111,7 +192,7 @@ int main()
     
     std::cout<<"Matrix size - "<<MATRIX_SIZE<<std::endl;
 
-    std::cout<<"Min value - "<<h_c[3503 * MATRIX_SIZE + 2431]<<std::endl;
+    std::cout<<"Min value - "<<minElement.value<<" - "<<h_c[3503 * MATRIX_SIZE + 2431]<<std::endl;
 
 
 }

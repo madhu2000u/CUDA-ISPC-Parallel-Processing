@@ -8,7 +8,7 @@ OUT = cuda-1g-wsm1.out
 	$(NC) $(SRC) -o $(OUT)
 
 1grun:1g
-	./$(OUT)
+	./$(OUT) > output.txt
 
 clean:
 	rm $(OUT)
