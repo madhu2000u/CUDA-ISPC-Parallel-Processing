@@ -37,43 +37,58 @@ void matrixInit(float *a, float *b, float *c)
     }
 }
 
-__device__ void warpReduce(volatile matElement *sharedC, int threadId)
+__device__ void warpReduce(volatile matElement *newSharedB, int threadId)
 {
-    if(sharedC[threadId].value > sharedC[threadId + 32].value){
-        sharedC[threadId].value = sharedC[threadId + 32].value;
-        sharedC[threadId].row = sharedC[threadId + 32].row;
-        sharedC[threadId].col = sharedC[threadId + 32].col;
+    if(newSharedB[threadId].value > newSharedB[threadId + 32].value){
+        newSharedB[threadId].value = newSharedB[threadId + 32].value;
+        newSharedB[threadId].row = newSharedB[threadId + 32].row;
+        newSharedB[threadId].col = newSharedB[threadId + 32].col;
     }
 
-    if(sharedC[threadId].value > sharedC[threadId + 16].value){
-        sharedC[threadId].value = sharedC[threadId + 16].value;
-        sharedC[threadId].row = sharedC[threadId + 16].row;
-        sharedC[threadId].col = sharedC[threadId + 16].col;
+    if(newSharedB[threadId].value > newSharedB[threadId + 16].value){
+        newSharedB[threadId].value = newSharedB[threadId + 16].value;
+        newSharedB[threadId].row = newSharedB[threadId + 16].row;
+        newSharedB[threadId].col = newSharedB[threadId + 16].col;
     }
 
-    if(sharedC[threadId].value > sharedC[threadId + 8].value){
-        sharedC[threadId].value = sharedC[threadId + 8].value;
-        sharedC[threadId].row = sharedC[threadId + 8].row;
-        sharedC[threadId].col = sharedC[threadId + 8].col;
+    if(newSharedB[threadId].value > newSharedB[threadId + 8].value){
+        newSharedB[threadId].value = newSharedB[threadId + 8].value;
+        newSharedB[threadId].row = newSharedB[threadId + 8].row;
+        newSharedB[threadId].col = newSharedB[threadId + 8].col;
     }
 
-    if(sharedC[threadId].value > sharedC[threadId + 4].value){
-        sharedC[threadId].value = sharedC[threadId + 4].value;
-        sharedC[threadId].row = sharedC[threadId + 4].row;
-        sharedC[threadId].col = sharedC[threadId + 4].col;
+    if(newSharedB[threadId].value > newSharedB[threadId + 4].value){
+        newSharedB[threadId].value = newSharedB[threadId + 4].value;
+        newSharedB[threadId].row = newSharedB[threadId + 4].row;
+        newSharedB[threadId].col = newSharedB[threadId + 4].col;
     }
 
-    if(sharedC[threadId].value > sharedC[threadId + 2].value){
-        sharedC[threadId].value = sharedC[threadId + 2].value;
-        sharedC[threadId].row = sharedC[threadId + 2].row;
-        sharedC[threadId].col = sharedC[threadId + 2].col;
+    if(newSharedB[threadId].value > newSharedB[threadId + 2].value){
+        newSharedB[threadId].value = newSharedB[threadId + 2].value;
+        newSharedB[threadId].row = newSharedB[threadId + 2].row;
+        newSharedB[threadId].col = newSharedB[threadId + 2].col;
     }
 
-    if(sharedC[threadId].value > sharedC[threadId + 1].value){
-        sharedC[threadId].value = sharedC[threadId + 1].value;
-        sharedC[threadId].row = sharedC[threadId + 1].row;
-        sharedC[threadId].col = sharedC[threadId + 1].col;
+    if(newSharedB[threadId].value > newSharedB[threadId + 1].value){
+        newSharedB[threadId].value = newSharedB[threadId + 1].value;
+        newSharedB[threadId].row = newSharedB[threadId + 1].row;
+        newSharedB[threadId].col = newSharedB[threadId + 1].col;
     }
+}
+
+__device__ void minBlockReduce(matElement *newSharedB, int threadId)
+{
+    for (unsigned int stride = (BLOCK_DIM * BLOCK_DIM)/2; stride > 32; stride >>= 1)
+    {
+        if(threadId < stride)
+        {
+            if(newSharedB[threadId].value > newSharedB[threadId + stride].value){
+                newSharedB[threadId] = newSharedB[threadId + stride];
+            }
+        }
+        __syncthreads();
+    }
+    if(threadId < 32) warpReduce(newSharedB, threadId);
 }
 
 __global__ void tiledMatrixMultiply(float *a, float *b, float *c, matElement *d_minValueFromEachBlock)
@@ -110,24 +125,50 @@ __global__ void tiledMatrixMultiply(float *a, float *b, float *c, matElement *d_
     
     c[row * MATRIX_SIZE + col] = temp;
 
-    for (unsigned int stride = (BLOCK_DIM * BLOCK_DIM)/2; stride > 32; stride >>= 1)
-    {
-        if(threadId < stride)
-        {
-            if(newSharedB[threadId].value > newSharedB[threadId + stride].value){
-                newSharedB[threadId] = newSharedB[threadId + stride];
-            }
-        }
-        __syncthreads();
-    }
-
-    if(threadId < 32) warpReduce(newSharedB, threadId);
-
+    minBlockReduce(newSharedB, threadId);
     if(threadId == 0){   
         d_minValueFromEachBlock[blockIdx.y * 128 + blockIdx.x].value = newSharedB[0].value;
         d_minValueFromEachBlock[blockIdx.y * 128 + blockIdx.x].row = newSharedB[0].row;
         d_minValueFromEachBlock[blockIdx.y * 128 + blockIdx.x].col = newSharedB[0].col;
+        // if (i == 16384)printf("val - %f\n", d_minValueFromEachBlock[blockIdx.y * 128 + blockIdx.x].value);
     }
+
+    // if(blockIdx.x < 16 && blockIdx.y == 0)
+    // {           //1024*(blockIdx.y * 4 + blockIdx.x)
+    //     // printf("block number - %d\n", blockIdx.x);
+    //     newSharedB[threadId].value = d_minValueFromEachBlock[blockIdx.y * 128 + blockIdx.x].value;
+    //     __syncthreads();
+    //     printf("global to shared val - %f : %d\n", newSharedB[threadId].value,blockIdx.y * 128 + blockIdx.x);
+    // }
+    // for(int i = (MATRIX_SIZE / BLOCK_DIM) * (MATRIX_SIZE / BLOCK_DIM); i > 0; i /= 1024)
+    // {if(i == 0) i = 1;
+    //     if(blockIdx.y * BLOCK_DIM + blockIdx.x < i)
+    //     {
+    //         minBlockReduce(newSharedB, threadId);
+    //         if(threadId == 0){   
+    //             d_minValueFromEachBlock[blockIdx.y * 128 + blockIdx.x].value = newSharedB[0].value;
+    //             d_minValueFromEachBlock[blockIdx.y * 128 + blockIdx.x].row = newSharedB[0].row;
+    //             d_minValueFromEachBlock[blockIdx.y * 128 + blockIdx.x].col = newSharedB[0].col;
+    //             // if (i == 16384)printf("val - %f\n", d_minValueFromEachBlock[blockIdx.y * 128 + blockIdx.x].value);
+    //         }
+    //     }
+        
+    //     __syncthreads();
+    //     if(i == 1) break;
+    //     int x = i/1024;
+    //     if(x == 0) x = 1;
+    //     if(blockIdx.y < x/2 && blockIdx.x < x/2)
+    //     {
+    //         newSharedB[threadId].value = d_minValueFromEachBlock[blockIdx.y * BLOCK_DIM + blockIdx.x + threadId].value;
+    //         newSharedB[threadId].row = d_minValueFromEachBlock[blockIdx.y * BLOCK_DIM + blockIdx.x + threadId].row;
+    //         newSharedB[threadId].col = d_minValueFromEachBlock[blockIdx.y * BLOCK_DIM + blockIdx.x + threadId].col;
+    //         if(x == 16)printf("global to shared vals - %f : %d\n", d_minValueFromEachBlock[blockIdx.y * BLOCK_DIM + blockIdx.x + threadId].value, blockIdx.y * BLOCK_DIM + blockIdx.x);
+    //         break;
+    //     }
+    //     __syncthreads();
+
+    // }
+    
 
     
 }
@@ -192,7 +233,7 @@ int main()
     
     std::cout<<"Matrix size - "<<MATRIX_SIZE<<std::endl;
 
-    std::cout<<"Min value - "<<minElement.value<<" - "<<h_c[3503 * MATRIX_SIZE + 2431]<<std::endl;
+    std::cout<<"Min value - "<<h_minValueFromEachBlock[0].value<<" - "<<minElement.value<<":"<<minElement.row<<":"<<minElement.col<<" - "<<h_c[3503 * MATRIX_SIZE + 2431]<<std::endl;
 
 
 }
