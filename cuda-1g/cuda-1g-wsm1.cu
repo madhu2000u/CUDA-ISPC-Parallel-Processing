@@ -208,7 +208,6 @@ int main()
 
     CHECK(cudaMemcpy(d_a, h_a, size, cudaMemcpyHostToDevice));
     CHECK(cudaMemcpy(d_b, h_b, size, cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpy(d_c, h_c, size, cudaMemcpyHostToDevice));
     
 
     tiledMatrixMultiply<<<blockPerGrid, threadsPerBlock>>>(d_a, d_b, d_c, d_minValueFromEachBlock);

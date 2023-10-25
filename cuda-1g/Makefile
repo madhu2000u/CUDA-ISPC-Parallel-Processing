@@ -4,7 +4,7 @@ SRC1g1m = cuda-1g-wsm1.cu
 
 SRC1g2m = cuda-1g-wsm2.cu
 
-OUT1g1m = cuda-1g-wsm1.ou
+OUT1g1m = cuda-1g-wsm1.out
 
 OUT1g2m = cuda-1g-wsm2.out
 
