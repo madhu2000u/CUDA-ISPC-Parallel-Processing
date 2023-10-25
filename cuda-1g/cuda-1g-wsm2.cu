@@ -271,9 +271,9 @@ int main()
     
     std::cout<<"Matrix size - "<<MATRIX_SIZE<<std::endl;
 
-    std::cout<<"Min value 1 - "<<h_minValueFromEachBlock[0].value<<" - "<<minElement[0].value<<":"<<minElement[0].row<<":"<<minElement[0].col<<" - "<<h_c[3503 * MATRIX_SIZE + 2431]<<std::endl;
+    std::cout<<"Min value 1 (val, row, col) - ("<<minElement[0].value<<", "<<minElement[0].row<<", "<<minElement[0].col<<")"<<std::endl;
 
-    std::cout<<"Min value 2 - "<<h_minValueFromEachBlock[0].value<<" - "<<minElement[1].value<<":"<<minElement[1].row<<":"<<minElement[1].col<<" - "<<h_c[3503 * MATRIX_SIZE + 2431]<<std::endl;
+    std::cout<<"Min value 2 (val, row, col) - ("<<minElement[1].value<<", "<<minElement[1].row<<", "<<minElement[1].col<<")"<<std::endl;
 
 
 }
