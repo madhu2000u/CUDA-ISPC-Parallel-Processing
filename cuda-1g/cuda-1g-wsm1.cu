@@ -232,7 +232,7 @@ int main()
     
     std::cout<<"Matrix size - "<<MATRIX_SIZE<<std::endl;
 
-    std::cout<<"Min value - "<<h_minValueFromEachBlock[0].value<<" - "<<minElement.value<<":"<<minElement.row<<":"<<minElement.col<<" - "<<h_c[3503 * MATRIX_SIZE + 2431]<<std::endl;
+    std::cout<<"Min value (val, row, col) - ("<<minElement.value<<", "<<minElement.row<<", "<<minElement.col<<")"<<std::endl;
 
 
 }
