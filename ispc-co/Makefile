@@ -1,6 +1,6 @@
 CC = gcc
 
-ISPC = ./ispc
+ISPC = ispc
 
 CFLAGS = -std=c99
 

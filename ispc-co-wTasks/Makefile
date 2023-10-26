@@ -1,6 +1,6 @@
 CC = g++
 
-ISPC = ./ispc
+ISPC = ispc
 
 CFLAGS = -std=gnu++11
 

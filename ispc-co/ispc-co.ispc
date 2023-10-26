@@ -10,9 +10,12 @@ export void matrixTransposeAndMultiply(uniform float matA[][MATRIX_SIZE], unifor
     {
         float temp = 0;
         for(int j = i; j < MATRIX_SIZE; j++)
-        {
+        {   
+            #pragma ignore warning(perf)
             temp = matB[i][j];
+            #pragma ignore warning(perf)
             matB[i][j] = matB[j][i];
+            #pragma ignore warning(perf)
             matB[j][i] = temp;
         }
     }
@@ -46,15 +49,19 @@ export void matrixTransposeAndMultiply(uniform float matA[][MATRIX_SIZE], unifor
             
             for(int k = 0; k < MATRIX_SIZE; k++)
             {
+                #pragma ignore warning(perf)
                 matC[i][j] += matA[i][k] * matB[j][k];
             }
+            #pragma ignore warning(perf)
             if(matC[i][j] < minEachC.value){ 
+                #pragma ignore warning(perf)
                 minEachC.value = matC[i][j];
                 minEachC.row = i;
                 minEachC.col = j;
 
             }
         }
+        #pragma ignore warning(perf)
         minResultC[i] = minEachC;       // Each lane computes it's own min value of it's corrsponding row of the multiplication. So we would have MATRIX_SIZE number of min values
         
     }
