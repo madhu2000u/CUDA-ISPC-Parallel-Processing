@@ -12,12 +12,15 @@ export void matrixTransposeISPC(uniform int id, uniform int row_start, uniform i
         float temp = 0;
         for(int j = i; j < MATRIX_SIZE; j++)
         {
+            #pragma ignore warning(perf)
             temp = matB[i][j];
             // if(id==0)print("\ntemp - i,j before moving\n%", temp);    //checking data race conditions. thread 0 takes lot of time to pring simd gang values while other procedes to finish and start multiplication without full transpose (if not barrier kept)
-            // print("\nrow = %, col = %\n\n",i, j);            
+            // print("\nrow = %, col = %\n\n",i, j);  
+            #pragma ignore warning(perf)          
             matB[i][j] = matB[j][i];                            
             // print("\nmatB[j][i] to i,j\n%", matB[i][j]);
             // print("\nrow = %, col = %\n\n",i, j);
+            #pragma ignore warning(perf)
             matB[j][i] = temp;
             // print("\nmatBj[j][i] from temp\n%", matB[j][i]);
             // print("\nrow = %, col = %\n\n",i, j);
@@ -57,6 +60,7 @@ export void matrixMultiplyISPC(uniform int row_start, uniform int row_end, unifo
         {
             for(int k = 0; k < MATRIX_SIZE; k++)
             {
+                #pragma ignore warning(perf)
                 matC[i][j] += matA[i][k] * matB[j][k];
                 // print("\nthreadId - %, row = %, col = %", threadId, i, j);
                 // print("\nthreadId - %, row = %, col = % : values = % * %", threadId, i, j, matA[i][k], matB[j][k]);
@@ -64,13 +68,16 @@ export void matrixMultiplyISPC(uniform int row_start, uniform int row_end, unifo
                 // if(k < MATRIX_SIZE - 1) print("\nrow = %, col = %: +", i, j);
             }
             // print("\n%-----C{%}-----{%} done", matC[i][j], i, j);
+            #pragma ignore warning(perf)
             if(matC[i][j] < minEachC.value){ 
+                #pragma ignore warning(perf)
                 minEachC.value = matC[i][j];
                 minEachC.row = i;
                 minEachC.col = j;
 
             }
         }
+        #pragma ignore warning(perf)
         minCElementThread[i] = minEachC;       // Each lane computes it's own min value of it's corrsponding row of the multiplication. So we would have MATRIX_SIZE number of min values
         // print("\nrow = % : MinThread[i] - %", i, minCElementThread[i].value);
     }

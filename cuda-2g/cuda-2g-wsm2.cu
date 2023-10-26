@@ -147,6 +147,7 @@ __global__ void tiledMatrixMultiply(int gpu, float *a, float *b, float *c, matEl
     newSharedB[threadId].value = temp;
     newSharedB[threadId].row = row;
     newSharedB[threadId].col = col;
+    __syncthreads();
     
     c[row * 4096 + col] = temp;
 

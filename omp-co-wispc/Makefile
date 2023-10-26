@@ -17,10 +17,10 @@ ISPC_H = omp-co-wispc.h
 all:$(TARGET) my_ispc-common.h
 
 $(TARGET):$(SRC) $(ISPC_OBJ)
-	$(CC) -g $(CFLAGS) $(ISPC_OBJ) $(SRC) -o $(TARGET) -lm
+	$(CC) $(CFLAGS) $(ISPC_OBJ) $(SRC) -o $(TARGET) -lm
 
 $(ISPC_OBJ):$(ISPC_SRC)
-	$(ISPC) -g $(ISPC_SRC) -o $(ISPC_OBJ) -h $(ISPC_H)
+	$(ISPC) $(ISPC_SRC) -o $(ISPC_OBJ) -h $(ISPC_H)
 
 
 run:all

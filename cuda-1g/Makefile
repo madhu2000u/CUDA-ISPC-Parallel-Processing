@@ -15,10 +15,10 @@ OUT1g2m = cuda-1g-wsm2.out
 	$(NC) $(SRC1g2m) -o $(OUT1g2m)
 
 1mrun:1m
-	./$(OUT1g1m) > output.txt
+	./$(OUT1g1m)
 
 2mrun:2m
-	./$(OUT1g2m) > output2m.txt
+	./$(OUT1g2m)
 
 clean:
 	rm $(OUT1g1m) $(OUT1g2m)

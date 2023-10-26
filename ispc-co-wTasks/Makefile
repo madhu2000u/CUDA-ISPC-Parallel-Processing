@@ -21,7 +21,13 @@ ISPC_TASK_OBJ = tasksys.o
 all:$(TARGET) my_ispc-common.h
 
 $(TARGET):$(ISPC_TASK_OBJ) $(ISPC_OBJ) $(SRC)
+ifeq ($(shell hostname), lion.ece.stonybrook.edu)
+	$(CC) -no-pie $^ -o $@ -lpthread
+else ifeq ($(shell hostname), bizon)
+	$(CC) -no-pie $^ -o $@ -lpthread
+else
 	$(CC) $^ -o $@ -lpthread
+endif
 
 $(ISPC_TASK_OBJ):$(ISPC_TASK_SRC)
 	$(CC) -c $(CFLAGS) $^ -o $@

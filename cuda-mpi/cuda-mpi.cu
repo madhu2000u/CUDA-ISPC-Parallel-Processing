@@ -23,21 +23,6 @@ typedef struct
 
 } matElement;
 
-//TODO remove
-// void matrixInit(float *a, float *b, float *c)
-// {
-//     for (int i = 0; i < MATRIX_SIZE; i++)
-//     {
-//         for (int j = 0; j < MATRIX_SIZE; j++)
-//         {   
-//             a[i * MATRIX_SIZE + j] = rand() / (float)1147654321;
-//             b[i * MATRIX_SIZE + j] = rand() / (float)1147654321;
-//             c[i * MATRIX_SIZE + j] = (float)0;
-//         }
-        
-//     }
-// }
-
 __device__ void reduceLastWarp(volatile matElement *newSharedB, int threadId)
 {
     if(newSharedB[threadId].value > newSharedB[threadId + 32].value){
@@ -176,7 +161,6 @@ extern matElement* runCuda(int mpi_rank, int rowSizePerWorkstation, float *h_a, 
         minElement[i].value = __FLT_MAX__;
     }
 
-    // float *h_a, *h_b, *h_c; //TODO remove
     float *d_a[num_gpus], *d_b, *d_c[num_gpus];             //d_b & h_b same for both gpus
 
     cudaStream_t streams[num_gpus];
@@ -188,11 +172,6 @@ extern matElement* runCuda(int mpi_rank, int rowSizePerWorkstation, float *h_a, 
 
     int gridSize_y = rowSizePerGpu / BLOCK_DIM;
     int gridSize_x = MATRIX_SIZE / BLOCK_DIM;
-
-    // //TODO remove
-    // h_a = (float*)malloc(size);
-    // h_b = (float*)malloc(size);
-    // h_c = (float*)malloc(size);
     
     for (int i = 0; i < num_gpus; i++)
     {
@@ -200,9 +179,9 @@ extern matElement* runCuda(int mpi_rank, int rowSizePerWorkstation, float *h_a, 
 
         h_minValueFromEachBlock[i] = (matElement*)malloc((gridSize_x) * (gridSize_y) * sizeof(matElement));      //gridSize_x because there are gridSize_x block across x axis and gridSize_x blocks * 32 block size = 4096 columns across x. similarly gridSize_y (here 64) blocks along y axis * 32 block size = 2048 rows per gpu
 
-        CHECK(cudaMallocHost(&d_a[i], rowSizePerGpu * MATRIX_SIZE * sizeof(float)));                    //each gpu gets rowSizePerGpu * MATRIX_SIZE (mxn) matrix for a
-        CHECK(cudaMallocHost(&d_b, size));                                                              //entire b matrix (nxn) is required for matrix multipliaion -_-
-        CHECK(cudaMallocHost(&d_c[i], rowSizePerGpu * MATRIX_SIZE * sizeof(float)));                    //resulting matrix per gpu is (mxn)
+        CHECK(cudaMallocHost(&d_a[i], rowSizePerGpu * MATRIX_SIZE * sizeof(float)));                             //each gpu gets rowSizePerGpu * MATRIX_SIZE (mxn) matrix for a
+        CHECK(cudaMallocHost(&d_b, size));                                                                       //entire b matrix (nxn) is required for matrix multipliaion -_-
+        CHECK(cudaMallocHost(&d_c[i], rowSizePerGpu * MATRIX_SIZE * sizeof(float)));                             //resulting matrix per gpu is (mxn)
         CHECK(cudaMallocHost(&d_minValueFromEachBlock[i], (gridSize_x) * (gridSize_y) * sizeof(matElement)));
 
         cudaStreamCreate(&streams[i]);
@@ -223,7 +202,6 @@ extern matElement* runCuda(int mpi_rank, int rowSizePerWorkstation, float *h_a, 
         
         tiledMatrixMultiply<<<blockPerGrid, threadsPerBlock, 0, streams[i]>>>(i, d_a[i], d_b, d_c[i], d_minValueFromEachBlock[i]);
 
-        // /CHECK(cudaMemcpyAsync(h_c + i * rowSizePerGpu * MATRIX_SIZE, d_c[i], rowSizePerGpu * MATRIX_SIZE * sizeof(float), cudaMemcpyDeviceToHost, streams[i]));
         CHECK(cudaMemcpyAsync(h_minValueFromEachBlock[i], d_minValueFromEachBlock[i], (gridSize_x) * (gridSize_y) * sizeof(matElement), cudaMemcpyDeviceToHost, streams[i]));
     }
 
@@ -308,13 +286,13 @@ extern matElement* runCuda(int mpi_rank, int rowSizePerWorkstation, float *h_a, 
     cudaGetDeviceProperties(&prop2, 0);
     exec_time = (double)(end_time.tv_sec - start_time.tv_sec) + (double)(end_time.tv_usec - start_time.tv_usec)/(double)1000000;
 
-    std::cout<<"Execution time - "<<exec_time<<std::endl;
+    std::cout<<"\nExecution time - "<<exec_time<<std::endl;
     
-    std::cout<<"Matrix size - "<<MATRIX_SIZE<<std::endl;
+    std::cout<<"Matrix size (rows per workstation) - "<<rowSizePerWorkstation<<std::endl;
 
     std::cout<<"Printing from rank "<<mpi_rank<<" GPU - "<<prop1.name<<" "<<prop1.major<<"."<<prop1.minor<<", min value 1 (val, row, col) - ("<<finalMinElements[0].value<<", "<<finalMinElements[0].row<<", "<<finalMinElements[0].col<<") "<<std::endl;
 
-    std::cout<<"Printing from rank "<<mpi_rank<<" GPU - "<<prop2.name<<" "<<prop2.major<<"."<<prop2.minor<<", min value 2 (val, row, col) - ("<<finalMinElements[1].value<<", "<<finalMinElements[1].row<<", "<<finalMinElements[1].col<<") "<<std::endl;
+    std::cout<<"Printing from rank "<<mpi_rank<<" GPU - "<<prop2.name<<" "<<prop2.major<<"."<<prop2.minor<<", min value 2 (val, row, col) - ("<<finalMinElements[1].value<<", "<<finalMinElements[1].row<<", "<<finalMinElements[1].col<<") \n"<<std::endl;
 
     return finalMinElements;
 

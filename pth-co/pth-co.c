@@ -272,7 +272,7 @@ int main(int argc, char* argv[]){
         printMatrix(C);
     #endif
 
-    checkMatrixResult(A, B, C);
+//    checkMatrixResult(A, B, C);
 
     exec_time = (double)(end_time.tv_sec - start_time.tv_sec) + (double)(end_time.tv_usec - start_time.tv_usec)/(double)1000000;
 

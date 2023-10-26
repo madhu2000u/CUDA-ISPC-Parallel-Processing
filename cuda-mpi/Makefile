@@ -14,7 +14,7 @@ TARGET = cuda-mpi.out
 
 HOSTNAME = $(shell hostname)
 
-EXEC_DIR = ~/ese565workingdir/pa/cuda-mpi/
+EXEC_DIR = ~/ese565workingdir/pa/cuda-mpi
 
 all:$(TARGET)
 

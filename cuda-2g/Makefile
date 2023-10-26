@@ -9,7 +9,7 @@ OUT = cuda-2-wsm2.out
 
 
 2grun:2g
-	./$(OUT) > output.txt
+	./$(OUT)
 
 
 clean:

@@ -17,16 +17,16 @@ ISPC_H = pth-co-wispc.h
 all:$(TARGET) my_ispc-common.h
 
 $(TARGET):$(SRC)
-	$(CC) -g $(CFLAGS) $(ISPC_OBJ) $(SRC) -o $(TARGET) -lm -pthread
+	$(CC) $(CFLAGS) $(ISPC_OBJ) $(SRC) -o $(TARGET) -lm -pthread
 
 $(SRC):$(ISPC)
 
 ispc:$(ISPC_SRC)
-	$(ISPC) -g  --target=avx512skx-i32x16 $(ISPC_SRC) -o $(ISPC_OBJ) -h $(ISPC_H)
+	$(ISPC) $(ISPC_SRC) -o $(ISPC_OBJ) -h $(ISPC_H)
 
 
 run:all
-	./$(TARGET) $(ARGS) > output.txt
+	./$(TARGET) $(ARGS) 
 
 clean:
 	rm $(TARGET) $(ISPC_OBJ) $(ISPC_H)

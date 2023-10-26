@@ -147,6 +147,7 @@ __global__ void tiledMatrixMultiply(float *a, float *b, float *c, matElement *d_
     newSharedB[threadId].value = temp;
     newSharedB[threadId].row = row;
     newSharedB[threadId].col = col;
+    __syncthreads();
     
     c[row * MATRIX_SIZE + col] = temp;
 

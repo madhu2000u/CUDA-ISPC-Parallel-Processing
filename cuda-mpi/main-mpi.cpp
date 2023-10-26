@@ -78,21 +78,17 @@ int main(int argc, char* argv[])
         h_b = (float*)malloc(size);
         
         minElementsFromNoW[1] = (matElement*) malloc(2 * sizeof(matElement));
-        // final = (matElement*) malloc(2 * sizeof(matElement));
-        // minElementsFromNoW1[0].value = 10;
-        // minElementsFromNoW1[1]->value = 20;
-        // *minElementsFromNoW = (matElement*)malloc(NoW * sizeof(matElement));
 
         matrixInit1(h_a, h_b);
         gettimeofday(&start_time, NULL);
         MCHECK(MPI_Send(h_a + mpiBuffSize , mpiBuffSize, MPI_FLOAT, 1, tag, MPI_COMM_WORLD));
         MCHECK(MPI_Send(h_b , (size / sizeof(float)), MPI_FLOAT, 1, tag, MPI_COMM_WORLD));              //no need to multiply by sizeof(float) as mpi_send implicitly determines it and if you do it will give seg fault
-        printf("sending done\n");
+        // printf("sending done\n");
         minElementsFromNoW[0] = runCuda(rank, rowSizePerWorkstation, h_a, h_b);
-        printf("waiting to recienve min elements\n");
+        // printf("waiting to recienve min elements\n");
         MCHECK(MPI_Recv(minElementsFromNoW[1], 2, MPI_matElement, 1, tag, MPI_COMM_WORLD, &recvStatus));
-        printf("recieved min elements\n");
-        printf("rank 0 %d\n", (minElementsFromNoW[1]+1)->row);
+        // printf("recieved min elements\n");
+        // printf("rank 0 %d\n", (minElementsFromNoW[1]+1)->row);
 
         float minVal = __FLT_MAX__;
         int minIndex_j = 0;
@@ -119,7 +115,8 @@ int main(int argc, char* argv[])
         gettimeofday(&end_time, NULL);
         
         exec_time = (double)(end_time.tv_sec - start_time.tv_sec) + (double)(end_time.tv_usec - start_time.tv_usec)/(double)1000000;
-        std::cout<<"Execution time by host of rank 0 - "<<exec_time<<std::endl;
+        std::cout<<"Matrix size - "<<MATRIX_SIZE<<std::endl;
+        std::cout<<"Total Execution time by host of rank 0 - "<<exec_time<<std::endl;
         std::cout<<"Final min value 1 (val, row, col) - ("<<final[0].value<<", "<<final[0].row<<", "<<final[0].col<<"), "<<"printing from rank "<<rank<<std::endl;
 
         std::cout<<"Final min value 2 (val, row, col) - ("<<final[1].value<<", "<<final[1].row<<", "<<final[1].col<<"), "<<"printing from rank "<<rank<<std::endl;
@@ -128,16 +125,16 @@ int main(int argc, char* argv[])
     else if(rank == 1)
     {   
         matElement *minElementsFromNoW;
-        printf("i am rank 1\n");
+        // printf("i am rank 1\n");
         h_a_r1 = (float*)malloc(rowSizePerWorkstation * MATRIX_SIZE * sizeof(float));
         h_b_r1 = (float*)malloc(size);
         MCHECK (MPI_Recv(h_a_r1, mpiBuffSize, MPI_FLOAT, 0, tag, MPI_COMM_WORLD, &recvStatus));
         MCHECK (MPI_Recv(h_b_r1, (size / sizeof(float)), MPI_FLOAT, 0, tag, MPI_COMM_WORLD, &recvStatus));
-        printf("sending recved\n");
+        // printf("sending recved\n");
         minElementsFromNoW = runCuda(rank, rowSizePerWorkstation, h_a_r1, h_b_r1);
-        printf("size of minElementsFromNoW %lu\n", sizeof(matElement));
+        // printf("size of minElementsFromNoW %lu\n", sizeof(matElement));
         MCHECK(MPI_Send(minElementsFromNoW, 2, MPI_matElement, 0, tag, MPI_COMM_WORLD)); 
-        printf("rank 1 %f\n", minElementsFromNoW[1].value);
+        // printf("rank 1 %f\n", minElementsFromNoW[1].value);
     }
 
     MPI_Finalize();
