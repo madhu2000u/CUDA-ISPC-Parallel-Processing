@@ -7,21 +7,7 @@
 #include "ispc-co-wTasks.h"
 #include "my_ispc-common.h"
 
-
-// #define MATRIX_SIZE 4096
-// #define DEBUG 0
-
-// struct matElement
-// {
-//     float value;
-//     int row, col;
-// };
-
-extern void *ISPCAlloc(void **handlePtr, int64_t size, int32_t alignment);
-extern void ISPCLaunch(void **handlePtr, void *f, void *data, int count0, int count1, int count2);
-extern void ISPCSync(void *handle);
-
-
+using namespace ispc;
 
 void printMatrix(float mat[][MATRIX_SIZE])
 {
@@ -100,31 +86,28 @@ int main(int argc, char* argv[]){
 
     if(argc < 2)
     {
-        printf("Required arguments not given\nUsage:\nmatrixSize: int, tasks: int");
+        printf("Required arguments not given\nUsage:\ntasks: int\n\nIf you are using makefile then Usage is:\nmake run ARGS=16, where ARGS is the number threads/cores/tasks\n");
         return 1;
     }
-    matrixSize = atoi(argv[0]);
     tasks = atoi(argv[1]);
-    printf("num argc - %d", argc);
 
-    float (*A)[MATRIX_SIZE] = malloc(sizeof(float[MATRIX_SIZE][MATRIX_SIZE]));
-    float (*B)[MATRIX_SIZE] = malloc(sizeof(float[MATRIX_SIZE][MATRIX_SIZE]));
-    float (*C)[MATRIX_SIZE] = malloc(sizeof(float[MATRIX_SIZE][MATRIX_SIZE]));
-    float (*ref_matrix)[MATRIX_SIZE] = malloc(sizeof(float[MATRIX_SIZE][MATRIX_SIZE]));
+    float (*A)[MATRIX_SIZE] = (float (*)[MATRIX_SIZE]) malloc(sizeof(float[MATRIX_SIZE][MATRIX_SIZE]));
+    float (*B)[MATRIX_SIZE] = (float (*)[MATRIX_SIZE]) malloc(sizeof(float[MATRIX_SIZE][MATRIX_SIZE]));
+    float (*C)[MATRIX_SIZE] = (float (*)[MATRIX_SIZE]) malloc(sizeof(float[MATRIX_SIZE][MATRIX_SIZE]));
+    float (*ref_matrix)[MATRIX_SIZE] = (float (*)[MATRIX_SIZE]) malloc(sizeof(float[MATRIX_SIZE][MATRIX_SIZE]));
 
     if(!A || !B || !C) {
         printf("Memrory allocation falied");
         return 1;
     }
 
-    srand(time(NULL));
     //Matrix initializations
     for (int i = 0; i < MATRIX_SIZE; i++)
     {
         for (int j = 0; j < MATRIX_SIZE; j++)
         {   
-            A[i][j] = ((float)rand());// / (float)(RAND_MAX/5.0));
-            B[i][j] = ((float)rand());// / (float)(RAND_MAX/5.0));
+            A[i][j] = rand() / (float)1147654321;
+            B[i][j] = rand() / (float)1147654321;
             C[i][j] = (float)0;
         }
         
@@ -149,22 +132,6 @@ int main(int argc, char* argv[]){
     }
 
     gettimeofday(&end_time, NULL);
-
-    // for (int i = 0; i < MATRIX_SIZE; i++)
-    // {   
-    //     float temp = 0;
-    //     for (int j = i; j < MATRIX_SIZE; j++)
-    //     {
-    //         // start = rdtsc();
-    //         temp = B[i][j];
-    //         B[i][j] = B[j][i];
-    //         B[j][i] = temp;
-    //         // end = rdtsc();
-    //     }
-        
-    // }
-
-    // gettimeofday(&end_time, NULL);
     
     #if DEBUG
         //Print transposed matrix
@@ -176,31 +143,26 @@ int main(int argc, char* argv[]){
     
 
     
-    // gettimeofday(&end_time, NULL);
-
+    gettimeofday(&end_time, NULL);
+    // checkMatrixResult(A, B, ref_matrix, C, finalMin);
     #if DEBUG
         //Print matric C
         printf("\n\nPrinting C...\n");
         printMatrix(C);
 
         printf("\n\nPrinting ref_matrix...\n");
-        printMatrix(ref_matrix);
-
-        // for (int i = 0; i < MATRIX_SIZE; i++)
-        // {
-        //     printf("(%f, %d, %d), ", minResultC[i].value, minResultC[i].row, minResultC[i].col);
-        // }
-        // printf("\n");
-        
+        printMatrix(ref_matrix);       
     #endif
 
-    checkMatrixResult(A, B, ref_matrix, C, finalMin);
+    
 
     exec_time = (double)(end_time.tv_sec - start_time.tv_sec) + (double)(end_time.tv_usec - start_time.tv_usec)/(double)1000000;
 
     printf("Execution time - %f\n", exec_time);
     
     printf("Matrix size - %d\n", MATRIX_SIZE);
+
+    printf("Num tasks - %d\n", tasks);
 
     printf("\n\nPrinting minVal...(%f, %d, %d)\n", finalMin.value, finalMin.row, finalMin.col);
     
