@@ -4,9 +4,13 @@
 
 static task void matrixTranspose(uniform float matB[][MATRIX_SIZE])
 {   
+    uniform float matrixSizeByNumThreads = (float)MATRIX_SIZE/(float)taskCount;
+    uniform float ceilFloatAvg = (ceil(matrixSizeByNumThreads) + floor(matrixSizeByNumThreads))/2.0;
+    uniform int threadWorkRows = (matrixSizeByNumThreads > ceilFloatAvg) ? ceil(matrixSizeByNumThreads) : floor(matrixSizeByNumThreads);
+
     uniform float min[MATRIX_SIZE];
-    uniform int row_start = (taskIndex * (MATRIX_SIZE/taskCount));
-    uniform int row_end = row_start + (MATRIX_SIZE/taskCount);
+    uniform int row_start = (taskIndex * threadWorkRows);
+    uniform int row_end =(taskIndex == taskCount - 1) ? MATRIX_SIZE : row_start + threadWorkRows;
     foreach(i = row_start ... row_end)
     {
         float temp = 0;
@@ -24,10 +28,14 @@ static task void matrixTranspose(uniform float matB[][MATRIX_SIZE])
 }
 
 static task void matrixMultiply(uniform float matA[][MATRIX_SIZE], uniform float matB[][MATRIX_SIZE], uniform float matC[][MATRIX_SIZE], uniform struct matElement minResultC[MATRIX_SIZE])
-{
+{   
+    uniform float matrixSizeByNumThreads = (float)MATRIX_SIZE/(float)taskCount;
+    uniform float ceilFloatAvg = (ceil(matrixSizeByNumThreads) + floor(matrixSizeByNumThreads))/2.0;
+    uniform int threadWorkRows = (matrixSizeByNumThreads > ceilFloatAvg) ? ceil(matrixSizeByNumThreads) : floor(matrixSizeByNumThreads);
+
     struct matElement minEachC;
-    uniform int row_start = (taskIndex * (MATRIX_SIZE/taskCount));
-    uniform int row_end = row_start + (MATRIX_SIZE/taskCount);
+    uniform int row_start = (taskIndex * threadWorkRows);
+    uniform int row_end =(taskIndex == taskCount - 1) ? MATRIX_SIZE : row_start + threadWorkRows;
     minEachC.value = FLT_MAX;
     foreach(i = row_start ... row_end)  // Each SIMD lane gets assigned its own i value. so if 16 lanes in avx512 then in parllel all 16 lanes will have i from 0 to 15 respectively
     {
